@@ -6,6 +6,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, average_precision_score
 import numpy as np
+from rapidfuzz import process, distance
 
 
 def load_data():
@@ -110,8 +111,63 @@ def test_predictors(X, y, num_runs=5):
     return results_df
 
 
-def expand_with_finsim(fins):
+def get_string_similarity_dict(sec_cols, finsim_cols, top):
+
+    similarity_dict = {}
+
+    for fin_col in finsim_cols:
+        matches = process.extract(
+            fin_col, sec_cols, scorer=distance.Levenshtein.distance, limit=10)
+        similarity_dict[fin_col] = [match[0]
+                                    for match in matches]
+    return similarity_dict
+
+
+def expand_with_finsim(sec, match_percentage=0.05, top=10):
     finsim = pd.read_csv("../data/other/finsim_feats_overlap_ecl_ao.csv")
     finsim.index = finsim['cik'].astype(
         str) + "__" + finsim['period_of_report']
     finsim.drop(columns=['cik', 'period_of_report'], inplace=True)
+
+    sec_cols = list(sec.columns)
+    finsim_cols = list(finsim.columns)
+
+    similarity_dict = get_string_similarity_dict(
+        sec_cols=sec_cols, finsim_cols=finsim_cols, top=top)
+
+    match_counts = {}
+    sec2finsim = {}
+
+    merged = sec.merge(finsim, how='inner', left_index=True, right_index=True)
+
+    for col1 in finsim_cols:
+        for col2 in sec_cols:
+            match_count = (merged[col1] == merged[col2]
+                           ).sum()
+            if match_count > match_percentage * merged.shape[0] and col2 in similarity_dict[col1]:
+                match_counts[(col1, col2)] = match_count
+
+                if col1 in sec2finsim:
+                    print("Multiple Match!")
+                    print(
+                        f"Previous match for column {col1} was {sec2finsim[col1]}, new match is {col2}")
+
+                sec2finsim[col2] = col1
+
+    print(f"Number of column pairs with matching values: {len(match_counts)}")
+    for pair, count in match_counts.items():
+        print(f"Columns {pair} have {count} matching rows")
+
+    sec_filled = sec.copy()
+    valid_indices = sec_filled.index.intersection(finsim.index)
+    nan_mask = sec_filled.isna()
+    mapped_cols = {tag: sec2finsim[tag]
+                   for tag in sec2finsim if tag in sec_filled.columns}
+    for sec_col, finsim_col in mapped_cols.items():
+        if finsim_col in finsim.columns and sec_col in sec_filled.columns:
+            sec_filled.loc[valid_indices, sec_col] = sec_filled.loc[valid_indices, sec_col].fillna(
+                finsim.loc[valid_indices, finsim_col]
+            )
+    print(f"{sec.isna().sum().sum() - sec_filled.isna().sum().sum()} new values from finsim!")
+
+    return sec2finsim, sec_filled
