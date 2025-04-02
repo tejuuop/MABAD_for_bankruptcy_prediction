@@ -1,9 +1,9 @@
 import pandas as pd
 from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
+from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.metrics import f1_score, average_precision_score
 import numpy as np
 from rapidfuzz import process, distance
@@ -63,24 +63,30 @@ def get_sliced_perc(fins, labels, cols_perc=0.5, false_rows_perc=1, true_rows_pe
     return fins_sliced.index, fins_sliced.columns
 
 
-def test_predictors(X, y, num_runs=5):
+def test_predictors(X, y, num_runs=5, random_state=42):
 
     f1s, APs, RPs = [], [], []
 
-    for i in range(num_runs):
+    cv = StratifiedKFold(random_state=random_state,
+                         n_splits=num_runs, shuffle=True)
 
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=i, stratify=y)
+    for train_inds, test_inds in cv.split(X, y):
+        X_train, y_train = X.iloc[train_inds], y.iloc[train_inds]
+        X_test,  y_test = X.iloc[test_inds], y.iloc[test_inds]
+
+        # X_train, X_test, y_train, y_test = train_test_split(
+        #     X, y, test_size=0.2, random_state=i, stratify=y)
 
         clf = Pipeline(
             [
 
+                # ('imp', KNNImputer(n_neighbors=3)),
                 ("imp", SimpleImputer(strategy="mean")),
                 ("sc", StandardScaler(with_mean=False)),
                 (
                     "clf",
                     LogisticRegression(
-                        random_state=i, class_weight="balanced", max_iter=1000
+                        random_state=random_state, class_weight="balanced", max_iter=1000
                     ),
                 ),
             ]
@@ -95,10 +101,10 @@ def test_predictors(X, y, num_runs=5):
             y_true=y_test, y_score=y_test_proba))
 
         y_test_proba_sorted_idx = np.flip(np.argsort(y_test_proba))
-        y_test_proba_sorted = y_test_proba[y_test_proba_sorted_idx]
+        y_test_sorted = y_test[y_test_proba_sorted_idx]
 
         total_positives = y_test.sum()
-        hits = y_test_proba_sorted[:total_positives].sum()
+        hits = y_test_sorted[:total_positives].sum()
         recall_at_precision = hits/total_positives
         RPs.append(recall_at_precision)
 
@@ -113,11 +119,30 @@ def test_predictors(X, y, num_runs=5):
 
 def get_string_similarity_dict(sec_cols, finsim_cols, top):
 
-    similarity_dict = {}
+    # from sentence_transformers import SentenceTransformer
 
+    # fin_cols_lower = [sec.lower() for sec in finsim_cols]
+
+    # sec_cols_lower = [sec.lower() for sec in sec_cols]
+
+    # # 1. Load a pretrained Sentence Transformer model
+    # model = SentenceTransformer("all-MiniLM-L6-v2")
+
+    # # 2. Calculate embeddings by calling model.encode()
+    # embeddings_fin = model.encode(fin_cols_lower)
+    # embeddings_sec = model.encode(sec_cols_lower)
+    # similarities = model.similarity(embeddings_fin, embeddings_sec)
+    # top_per_fin = np.fliplr(np.argsort(similarities, axis=1))[:, top]
+    # similarity_dict = {}
+    # for fin_index, fin_col in enumerate(finsim_cols):
+    #     similarity_dict[fin_col] = [sec_cols[similar_index_sec]
+    #                                 for similar_index_sec in top_per_fin[fin_index]]
+
+    similarity_dict = {}
+    sec_cols_lower = [sec.lower() for sec in sec_cols]
     for fin_col in finsim_cols:
         matches = process.extract(
-            fin_col, sec_cols, scorer=distance.Levenshtein.distance, limit=10)
+            fin_col.lower(), sec_cols_lower, scorer=distance.Levenshtein.distance, limit=top)
         similarity_dict[fin_col] = [match[0]
                                     for match in matches]
     return similarity_dict
@@ -144,15 +169,20 @@ def expand_with_finsim(sec, match_percentage=0.05, top=10):
         for col2 in sec_cols:
             match_count = (merged[col1] == merged[col2]
                            ).sum()
-            if match_count > match_percentage * merged.shape[0] and col2 in similarity_dict[col1]:
-                match_counts[(col1, col2)] = match_count
+            if match_count > match_percentage * merged.shape[0]:
+                if col2 in similarity_dict[col1]:
+                    match_counts[(col1, col2)] = match_count
 
-                if col1 in sec2finsim:
-                    print("Multiple Match!")
-                    print(
-                        f"Previous match for column {col1} was {sec2finsim[col1]}, new match is {col2}")
+                    if col1 in sec2finsim:
+                        print("Multiple Match!")
+                        print(
+                            f"Previous match for column {col1} was {sec2finsim[col1]}, new match is {col2}")
 
-                sec2finsim[col2] = col1
+                    sec2finsim[col2] = col1
+                else:
+                    # sec2finsim[col2] = col1
+                    # print(f"Finsim col: {col1} --> Sec col {col2}") #just value match
+                    pass
 
     print(f"Number of column pairs with matching values: {len(match_counts)}")
     for pair, count in match_counts.items():
@@ -160,7 +190,7 @@ def expand_with_finsim(sec, match_percentage=0.05, top=10):
 
     sec_filled = sec.copy()
     valid_indices = sec_filled.index.intersection(finsim.index)
-    nan_mask = sec_filled.isna()
+
     mapped_cols = {tag: sec2finsim[tag]
                    for tag in sec2finsim if tag in sec_filled.columns}
     for sec_col, finsim_col in mapped_cols.items():
