@@ -1,24 +1,36 @@
-Number of column pairs with matching values: 43
+Number of column pairs with matching values: 68
 Columns ('Revenue', 'Revenues') have 5989 matching rows
 Columns ('Gross Profit', 'GrossProfit') have 5580 matching rows
+Columns ('Operating Expenses', 'OperatingIncomeLoss') have 56 matching rows
 Columns ('Depreciation & Amortization', 'OtherDepreciationAndAmortization') have 164 matching rows
 Columns ('Depreciation & Amortization', 'DepreciationAndAmortization') have 3282 matching rows
 Columns ('Depreciation & Amortization', 'Depreciation') have 661 matching rows
+Columns ('Depreciation & Amortization', 'DepreciationNonproduction') have 19 matching rows
 Columns ('Depreciation & Amortization', 'DepreciationDepletionAndAmortization') have 7660 matching rows
 Columns ('Operating Income (Loss)', 'OperatingIncomeLoss') have 5065 matching rows
 Columns ('Non-Operating Income (Loss)', 'NonoperatingIncomeExpense') have 2360 matching rows
+Columns ('Non-Operating Income (Loss)', 'OtherOperatingIncomeExpenseNet') have 19 matching rows
+Columns ('Non-Operating Income (Loss)', 'OtherNonoperatingIncome') have 24 matching rows
 Columns ('Non-Operating Income (Loss)', 'OtherNonoperatingIncomeExpense') have 472 matching rows
+Columns ('Interest Expense, Net', 'InterestIncomeOther') have 19 matching rows
 Columns ('Interest Expense, Net', 'InterestRevenueExpenseNet') have 161 matching rows
+Columns ('Interest Expense, Net', 'InterestExpense') have 25 matching rows
 Columns ('Interest Expense, Net', 'InterestIncomeExpenseNet') have 1455 matching rows
+Columns ('Pretax Income (Loss), Adj.', 'OperatingIncomeLoss') have 33 matching rows
 Columns ('Pretax Income (Loss), Adj.', 'NetIncomeLoss') have 132 matching rows
+Columns ('Pretax Income (Loss)', 'OperatingIncomeLoss') have 34 matching rows
 Columns ('Pretax Income (Loss)', 'ProfitLoss') have 300 matching rows
 Columns ('Pretax Income (Loss)', 'NetIncomeLoss') have 249 matching rows
+Columns ('Income Tax (Expense) Benefit, Net', 'IncomeTaxExpenseBenefit') have 68 matching rows
+Columns ('Income Tax (Expense) Benefit, Net', 'DeferredIncomeTaxExpenseBenefit') have 33 matching rows
+Columns ('Income Tax (Expense) Benefit, Net', 'CurrentIncomeTaxExpenseBenefit') have 21 matching rows
 Columns ('Income (Loss) from Continuing Operations', 'IncomeLossFromContinuingOperations') have 1635 matching rows
 Columns ('Net Income', 'NetIncomeLoss') have 12214 matching rows
 Columns ('Net Income (Common)', 'NetIncomeLoss') have 11348 matching rows
 Columns ('Cash, Cash Equivalents & Short Term Investments', 'CashAndCashEquivalentsFairValueDisclosure') have 207 matching rows
 Columns ('Cash, Cash Equivalents & Short Term Investments', 'CashCashEquivalentsAndShortTermInvestments') have 378 matching rows
 Columns ('Cash, Cash Equivalents & Short Term Investments', 'CashAndCashEquivalentsAtCarryingValue') have 9226 matching rows
+Columns ('Cash, Cash Equivalents & Short Term Investments', 'CashAndCashEquivalentsPeriodIncreaseDecrease') have 24 matching rows
 Columns ('Accounts & Notes Receivable', 'AccountsReceivableNet') have 581 matching rows
 Columns ('Accounts & Notes Receivable', 'AccountsAndNotesReceivableNet') have 146 matching rows
 Columns ('Inventories', 'InventoryGross') have 108 matching rows
@@ -30,16 +42,29 @@ Columns ('Other Long Term Assets', 'OtherAssets') have 144 matching rows
 Columns ('Total Noncurrent Assets', 'AssetsNoncurrent') have 580 matching rows
 Columns ('Total Noncurrent Assets', 'NoncurrentAssets') have 234 matching rows
 Columns ('Total Assets', 'Assets') have 13456 matching rows
+Columns ('Short Term Debt', 'LongTermDebt') have 69 matching rows
 Columns ('Short Term Debt', 'SecuredDebt') have 101 matching rows
+Columns ('Long Term Debt', 'SecuredLongTermDebt') have 34 matching rows
 Columns ('Long Term Debt', 'LongTermDebt') have 1053 matching rows
+Columns ('Long Term Debt', 'UnsecuredDebt') have 17 matching rows
+Columns ('Long Term Debt', 'LongTermDebtCurrent') have 39 matching rows
+Columns ('Long Term Debt', 'ConvertibleDebt') have 28 matching rows
 Columns ('Total Liabilities', 'Liabilities') have 9384 matching rows
+Columns ('Share Capital & Additional Paid-In Capital', 'CommonStockIncludingAdditionalPaidInCapital') have 79 matching rows
 Columns ('Share Capital & Additional Paid-In Capital', 'CommonStocksIncludingAdditionalPaidInCapital') have 253 matching rows
 Columns ('Share Capital & Additional Paid-In Capital', 'AdditionalPaidInCapital') have 352 matching rows
+Columns ('Treasury Stock', 'TreasuryStockShares') have 62 matching rows
 Columns ('Treasury Stock', 'TreasuryStockValue') have 132 matching rows
 Columns ('Net Income/Starting Line', 'NetIncomeLoss') have 6975 matching rows
 Columns ('Net Cash from Operating Activities', 'NetCashProvidedByUsedInOperatingActivities') have 11345 matching rows
+Columns ('Net Change in Long Term Investment', 'ShortTermInvestments') have 29 matching rows
 Columns ('Net Cash from Investing Activities', 'NetCashProvidedByUsedInInvestingActivities') have 11549 matching rows
+Columns ('Dividends Paid', 'DividendsCash') have 33 matching rows
+Columns ('Dividends Paid', 'Dividends') have 20 matching rows
+Columns ('Cash from (Repayment of) Debt', 'RepaymentsOfDebt') have 24 matching rows
 Columns ('Cash from (Repayment of) Debt', 'ProceedsFromRepaymentsOfDebt') have 118 matching rows
 Columns ('Cash from (Repurchase of) Equity', 'PaymentsForRepurchaseOfCommonStock') have 240 matching rows
+Columns ('Cash from (Repurchase of) Equity', 'PaymentsForRepurchaseOfEquity') have 18 matching rows
+Columns ('Cash from (Repurchase of) Equity', 'ProceedsFromRepurchaseOfEquity') have 36 matching rows
 Columns ('Net Cash from Financing Activities', 'NetCashProvidedByUsedInFinancingActivities') have 11669 matching rows
-312860 new values from finsim!
+516054 new values from finsim!
