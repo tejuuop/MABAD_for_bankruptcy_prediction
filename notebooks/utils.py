@@ -9,11 +9,18 @@ import numpy as np
 from rapidfuzz import process, distance
 
 
-def load_data():
+def load_data(after_year=None):
     fins_sparse = pd.read_csv('../data/SEC/sec_fins_sparse.csv')
+    fins_sparse.set_index('uid', inplace=True)
+
+    print(f"Initially, there are {fins_sparse['label'].sum()} positives")
+
+    if after_year:
+        fins_sparse = fins_sparse[fins_sparse.index.to_series().apply(lambda x: int(x.split("__")[1].split("-")[0])).astype(int) >= after_year]
+
     labels = fins_sparse['label']
     fins_sparse.drop(columns=['label'], inplace=True)
-    fins_sparse.set_index('uid', inplace=True)
+    print(f"After {after_year}, there are {labels.sum()} positives")
     labels.index = fins_sparse.index
     return fins_sparse, labels
 
@@ -63,6 +70,18 @@ def get_sliced_perc(fins, labels, cols_perc=0.5, false_rows_perc=1, true_rows_pe
     print(labels[fins_sliced.index].value_counts())
     return fins_sliced.index, fins_sliced.columns
 
+
+def maximize_positive_density(fins, labels, top_cols):
+    fins = pd.concat([fins,labels],axis=1)
+    positives = fins[labels]
+    most_dense_cols = positives.notna().sum(axis=0).sort_values(ascending=False)[:top_cols+1].index
+    print(most_dense_cols)
+    fins = fins.loc[:,most_dense_cols]
+    fins.dropna(inplace=True)
+    labels = fins['label']
+    fins.drop(columns=['label'], inplace=True)
+    print(labels.value_counts())
+    return fins, labels
 
 def test_predictors(X, y, num_runs=5, random_state=42):
 
