@@ -66,9 +66,24 @@ def get_sliced_perc(fins, labels, cols_perc=0.5, false_rows_perc=1, true_rows_pe
 
     fins_sliced = fins_sliced.loc[dense_true_rows_idx.tolist(
     ) + dense_false_rows_idx.tolist()]
+
+    print()
+    print(f"Mean sample density (out of {fins_sliced.shape[1]} feats):")
+    print(f"{fins_sliced.notna().sum(axis=1).mean():.2f}")
+    print()
+    print(f"Std sample density (out of {fins_sliced.shape[1]} feats):")
+    print(f"{fins_sliced.notna().sum(axis=1).std():.2f}")
     print()
     print(labels[fins_sliced.index].value_counts())
     return fins_sliced.index, fins_sliced.columns
+
+
+def atleast_one_feat(fins, labels):
+    
+    positives = fins[labels]
+    densecols = positives.notna().sum(axis=0)
+    densecols = densecols[densecols > 1]
+    print(densecols)
 
 
 def maximize_positive_density(fins, labels, top_cols):
@@ -83,12 +98,12 @@ def maximize_positive_density(fins, labels, top_cols):
     print(labels.value_counts())
     return fins, labels
 
-def test_predictors(X, y, num_runs=5, random_state=42):
+def test_predictors(X, y, n_splits=10, random_state=42):
 
     f1s, APs, RPs = [], [], []
 
     cv = StratifiedKFold(random_state=random_state,
-                         n_splits=num_runs, shuffle=True)
+                         n_splits=n_splits, shuffle=True)
 
     for train_inds, test_inds in cv.split(X, y):
         X_train, y_train = X.iloc[train_inds], y.iloc[train_inds]
