@@ -1,2 +1,5 @@
 __pycache__/
-*.csv
+sec_fins_sparse.csv
+subset_sec_fins_sparse.csv
+*.log
+*.json

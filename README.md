@@ -1,8 +1,7 @@
 # Bankruptcy Prediction using data from 10-K reports
 We propose a multimodal approach designed to handle sparse data in the task of bankruptcy prediction. <br>
 
-Run inside data folder: <br><br>
-`unzip sec_fins_sparse.zip` <br>
+
 
 |        Financial Dataset Info               |        |
 |----------------------------------|-------------|
@@ -47,4 +46,10 @@ Run inside data folder: <br><br>
 
 Usage: <br>
 
-`python main.py --model_type XGBoost --modality financial --n_estimators 10 --max_depth 3`
+1) Run inside data folder:<br><br>
+        
+       unzip sec_fins_sparse.zip 
+
+    `subset_sec_fins_sparse.zip` is just a subset for quicker experimentation 
+
+2)     python main.py --model_type XGBoost --modality financial --n_estimators 10 --max_depth 3
