@@ -7,6 +7,7 @@ import numpy as np
 from config import VAL_METRIC_TO_OPTIMIZE
 import pandas as pd 
 from utils.logger import  get_logger
+from preprocessing.base_preprocessor import BasePreprocessor
 
 logger = get_logger(__name__)
 
@@ -24,8 +25,32 @@ class BaseModel(ABC):
     def predict_proba(self, X):
         pass
 
-    def evaluate(self, X, y):
+    @abstractmethod
+    def save(self):
+        pass
+
+    @abstractmethod
+    def load(self):
+        pass
+    
+    @property
+    @abstractmethod
+    def preprocessor(self) -> BasePreprocessor:
+        pass
+
+    @property
+    def current_validation_performance(self):
+
+        metrics = {"auc" : self.auc,
+                    "ap" : self.ap ,
+                    "fbeta" : self.fbeta,
+                    "recall_at_precision" : self.recall_at_precision}
         
+        return metrics[VAL_METRIC_TO_OPTIMIZE]
+
+
+    def evaluate(self, X, y, dataset):
+
         preds = self.predict(X)
         scores = self.predict_proba(X)[:,1]    
 
@@ -39,14 +64,33 @@ class BaseModel(ABC):
         found_labels = y.reset_index(drop=True).loc[sorted_indices]
         self.recall_at_precision = found_labels[:num_of_positives].sum() / num_of_positives
         
-        
+        self.auc = round(self.auc, 2)
+        self.ap = round(self.ap,2)
+        self.fbeta = round(self.fbeta, 2)
+        self.recall_at_precision = round(self.recall_at_precision,2)
+
+        results = {
+            "model": self.model_type,
+            "auc": self.auc,
+            "ap": self.ap,
+            "fbeta": self.fbeta,
+            "recall_at_precision": self.recall_at_precision
+        }
+
+        if dataset == 'train':
+            logger.info(f"Training set results: {results}")
+        elif dataset == 'val':
+            logger.info(f"Validation set results: {results}")
+        else:
+            logger.info(f"Test set results: {results}")
+
     def save_hyperparameters(self):
         #save only hyperparameter class attributes
         hyperparameters = {k:v for k,v in self.__dict__.items() if isinstance(v, (int, float, str, bool, type(None)))} 
         
         timestamp = datetime.now().isoformat()
         new_record = {timestamp : hyperparameters}
-        json_path = os.path.join('hyperparameters',f"{hyperparameters['modality']}_{hyperparameters['model_type']}.json")
+        json_path = os.path.join('hyperparameters',f"{self.modality}",f"{self.model_type}.json")
 
         if os.path.exists(json_path):
             with open(json_path, 'r') as file:
@@ -57,12 +101,14 @@ class BaseModel(ABC):
         with open(json_path, 'w') as file:
             json.dump(new_record, file, indent=4)
 
-    def load_hyperparameters(self):
-        """
-        loads best hyperparameters until so far based on {metric_to_optimize}
-        """
+    def previous_best_validation_performance(self):
 
-        json_path = os.path.join('hyperparameters',f"{self.modality}_{self.model_type}.json")
+        json_path = os.path.join('hyperparameters', f"{self.modality}", f"{self.model_type}.json")
+
+        if not os.path.exists(json_path):
+            logger.info(f"No previous hyperparameter file found for model: {self.model_type} and modality: {self.modality}")
+            return -1
+
         with open(json_path, 'r') as file:
             prev_hyperparameters = json.load(file)
 
@@ -75,11 +121,9 @@ class BaseModel(ABC):
                 best_metric = metric_value
                 for hyperparameter, hyper_value in values.items():
                     if hyperparameter in self.__dict__:
-                        self.__dict__[hyperparameter] = hyper_value
                         best_hyperparams[hyperparameter] = hyper_value
 
-        logger.info(f"Best hyperparameters found at {VAL_METRIC_TO_OPTIMIZE} = {best_metric:.3f}: {best_hyperparams}")
-        
+        return best_metric
         
     def save_results(self):
         """
@@ -89,14 +133,13 @@ class BaseModel(ABC):
         csv_path = os.path.join('results',f"{self.modality}.csv")
 
         results = pd.DataFrame([{
-            "model": self.model_type,
-            "auc": self.auc,
-            "ap": self.ap,
-            "fbeta": self.fbeta,
-            "recall_at_precision": self.recall_at_precision
+            "model": f"{self.model_type}",
+            "auc": f"{self.auc:.2f}",
+            "ap": f"{self.ap:.2f}",
+            "fbeta": f"{self.fbeta:.2f}",
+            "recall_at_precision": f"{self.recall_at_precision:.2f}"
         }])
 
-        logger.info(f"Test set results: {results.iloc[0].to_dict()}")
         if os.path.exists(csv_path):
             previous_results = pd.read_csv(csv_path)
             previous_results = previous_results[previous_results.model != self.model_type] #keep the latest one

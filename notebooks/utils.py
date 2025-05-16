@@ -10,7 +10,7 @@ from rapidfuzz import process, distance
 
 
 def load_data(after_year=None):
-    fins_sparse = pd.read_csv('../data/sec_fins_sparse.csv')
+    fins_sparse = pd.read_csv('../data/numerical.csv')
     fins_sparse.set_index('uid', inplace=True)
 
     print(f"Initially, there are {fins_sparse['label'].sum()} positives")

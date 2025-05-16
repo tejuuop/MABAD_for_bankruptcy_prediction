@@ -1,5 +1,8 @@
 __pycache__/
-sec_fins_sparse.csv
-subset_sec_fins_sparse.csv
+numerical.csv
+subset_numerical.csv
+mda_auditor.csv
+subset_mda_auditor.csv
 *.log
 *.json
+*.pkl

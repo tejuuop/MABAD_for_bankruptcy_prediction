@@ -3,6 +3,12 @@ import pandas as pd
 import os 
 from sklearn.model_selection import train_test_split
 from config import RANDOM_SEED
+from sklearn.feature_extraction.text import TfidfVectorizer
+from joblib import dump, load
+import pickle
+import numpy as np
+
+
 from utils.logger import  get_logger
 
 logger = get_logger(__name__)
@@ -24,11 +30,33 @@ def split(data):
 def get_data(modality, subset):
     if modality == 'financial':
         if subset:
-            financial = pd.read_csv(os.path.join(os.getcwd(), 'data', 'subset_sec_fins_sparse.csv'))
+            financial = pd.read_csv(os.path.join(os.getcwd(), 'data', 'subset_numerical.csv'))
         else:
-            financial = pd.read_csv(os.path.join(os.getcwd(), 'data', 'sec_fins_sparse.csv'))
+            financial = pd.read_csv(os.path.join(os.getcwd(), 'data', 'numerical.csv'))
         financial.set_index('uid', inplace=True)
         return split(financial)
+    elif modality == 'mda_auditor':
+        if subset:
+            mda_auditor = pd.read_csv(os.path.join(os.getcwd(), 'data', 'subset_mda_auditor.csv'))
+        else:
+            mda_auditor = pd.read_csv(os.path.join(os.getcwd(), 'data', 'mda_auditor.csv'))
+        mda_auditor.set_index('uid', inplace=True)
+        return split(mda_auditor)
+    elif modality == 'multimodal':
+        if subset:
+            financial = pd.read_csv(os.path.join(os.getcwd(), 'data', 'subset_numerical.csv'))
+            mda_auditor = pd.read_csv(os.path.join(os.getcwd(), 'data', 'subset_mda_auditor.csv'))
+        else:
+            financial = pd.read_csv(os.path.join(os.getcwd(), 'data', 'numerical.csv'))
+            mda_auditor = pd.read_csv(os.path.join(os.getcwd(), 'data', 'mda_auditor.csv'))
+
+        financial.set_index('uid', inplace=True)
+        mda_auditor.set_index('uid', inplace=True)
+
+        financial = split(financial)
+        mda_auditor = split(mda_auditor)
+        
+        return (financial[0], mda_auditor[0]), financial[1], (financial[2], mda_auditor[2]), financial[3], (financial[4], mda_auditor[4]), financial[5]
 
 def get_model(**kwargs):
     model_type = kwargs['model_type']
