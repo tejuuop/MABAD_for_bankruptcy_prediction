@@ -1,7 +1,7 @@
 __pycache__/
 numerical.csv
 subset_numerical.csv
-mda_auditor.csv
+data/mda_auditor.csv
 subset_mda_auditor.csv
 *.log
 *.json
