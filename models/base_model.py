@@ -5,13 +5,49 @@ from datetime import datetime
 from sklearn.metrics import average_precision_score, roc_auc_score, fbeta_score
 import numpy as np
 from config import VAL_METRIC_TO_OPTIMIZE
-import pandas as pd 
-from utils.logger import  get_logger
+import pandas as pd
+from utils.logger import get_logger
 from preprocessing.base_preprocessor import BasePreprocessor
+from preprocessing.tfidf_preprocessor import TFIDFpreprocessor
+from preprocessing.pass_preproccessor import PASSpreprocessor
+from preprocessing.concat_preprocessor import CONCATpreprocessor
+from preprocessing.mean_imputer_preprocessor import MeanImputer
+
 
 logger = get_logger(__name__)
 
+
 class BaseModel(ABC):
+
+    @property
+    def model_dir_path(self) -> str:
+        path = os.path.join("models", "saved_models",
+                            self.modality, self.model_type)
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    @property
+    def model_path(self) -> str:
+        return os.path.join(self.model_dir_path, "model.json")
+
+    @property
+    def best_hyperparameters_path(self) -> str:
+        return os.path.join(self.model_dir_path, "hyperparameters.json")
+
+    @property
+    def current_validation_performance(self):
+
+        metrics = {"auc": self.auc,
+                   "ap": self.ap,
+                   "fbeta": self.fbeta,
+                   "recall_at_precision": self.recall_at_precision}
+
+        return metrics[VAL_METRIC_TO_OPTIMIZE]
+
+    @property
+    @abstractmethod
+    def preprocessor(self) -> BasePreprocessor:
+        pass
 
     @abstractmethod
     def fit(self, X, y):
@@ -32,42 +68,41 @@ class BaseModel(ABC):
     @abstractmethod
     def load(self):
         pass
-    
-    @property
-    @abstractmethod
-    def preprocessor(self) -> BasePreprocessor:
-        pass
 
-    @property
-    def current_validation_performance(self):
+    @staticmethod
+    def load_hyperparameter_dict(path: str) -> dict:
+        with open(path, "r") as f:
+            return json.load(f)
 
-        metrics = {"auc" : self.auc,
-                    "ap" : self.ap ,
-                    "fbeta" : self.fbeta,
-                    "recall_at_precision" : self.recall_at_precision}
-        
-        return metrics[VAL_METRIC_TO_OPTIMIZE]
+    @classmethod
+    def from_hyperparams(cls, hyperparameter_path):
+        hyperparameters = cls.load_hyperparameter_dict(hyperparameter_path)
+        logger.info(f"Loaded hyperparameters: {hyperparameters}")
 
+        return cls(**hyperparameters)
 
     def evaluate(self, X, y, dataset):
 
         preds = self.predict(X)
-        scores = self.predict_proba(X)[:,1]    
+        scores = self.predict_proba(X)
 
         self.auc = roc_auc_score(y_score=scores, y_true=y)
         self.ap = average_precision_score(y_score=scores, y_true=y)
-        self.fbeta = fbeta_score(y_pred=preds, y_true=y , beta=1.5, average='binary') # we focus on the bankruptcy case with more interest on the recall metric. threshold is 0.5
+        # we focus on the bankruptcy case with more interest on the recall metric. threshold is 0.5
+        self.fbeta = fbeta_score(
+            y_pred=preds, y_true=y, beta=1.5, average='binary')
 
-        #recall_at_precision at threshold τ=number of true positives
-        num_of_positives = y.sum() 
+        # recall_at_precision at threshold τ=number of true positives
+        num_of_positives = y.sum()
         sorted_indices = np.argsort(scores)[::-1]
         found_labels = y.reset_index(drop=True).loc[sorted_indices]
-        self.recall_at_precision = found_labels[:num_of_positives].sum() / num_of_positives
-        
+        self.recall_at_precision = found_labels[:num_of_positives].sum(
+        ) / num_of_positives
+
         self.auc = round(self.auc, 2)
-        self.ap = round(self.ap,2)
+        self.ap = round(self.ap, 2)
         self.fbeta = round(self.fbeta, 2)
-        self.recall_at_precision = round(self.recall_at_precision,2)
+        self.recall_at_precision = round(self.recall_at_precision, 2)
 
         results = {
             "model": self.model_type,
@@ -84,13 +119,15 @@ class BaseModel(ABC):
         else:
             logger.info(f"Test set results: {results}")
 
-    def save_hyperparameters(self):
-        #save only hyperparameter class attributes
-        hyperparameters = {k:v for k,v in self.__dict__.items() if isinstance(v, (int, float, str, bool, type(None)))} 
-        
+    def save_hyperparameters(self, qualify_for_testing=False):
+        # save only hyperparameter class attributes
+        hyperparameters = {k: v for k, v in self.__dict__.items() if isinstance(
+            v, (int, float, str, bool, type(None), tuple, list))}
+
         timestamp = datetime.now().isoformat()
-        new_record = {timestamp : hyperparameters}
-        json_path = os.path.join('hyperparameters',f"{self.modality}",f"{self.model_type}.json")
+        new_record = {timestamp: hyperparameters}
+        json_path = os.path.join(
+            'hyperparameters', f"{self.modality}", f"{self.model_type}.json")
 
         if os.path.exists(json_path):
             with open(json_path, 'r') as file:
@@ -101,20 +138,26 @@ class BaseModel(ABC):
         with open(json_path, 'w') as file:
             json.dump(new_record, file, indent=4)
 
+        if qualify_for_testing:
+            with open(self.best_hyperparameters_path, 'w') as file:
+                json.dump(hyperparameters, file, indent=4)
+
     def previous_best_validation_performance(self):
 
-        json_path = os.path.join('hyperparameters', f"{self.modality}", f"{self.model_type}.json")
+        json_path = os.path.join(
+            'hyperparameters', f"{self.modality}", f"{self.model_type}.json")
 
         if not os.path.exists(json_path):
-            logger.info(f"No previous hyperparameter file found for model: {self.model_type} and modality: {self.modality}")
-            return -1
+            logger.info(
+                f"No previous hyperparameter file found for model: {self.model_type} and modality: {self.modality}")
+            return -1, {}
 
         with open(json_path, 'r') as file:
             prev_hyperparameters = json.load(file)
 
-        
         best_metric = -1
         best_hyperparams = {}
+
         for _, values in prev_hyperparameters.items():
             metric_value = values[VAL_METRIC_TO_OPTIMIZE]
             if metric_value > best_metric:
@@ -123,14 +166,14 @@ class BaseModel(ABC):
                     if hyperparameter in self.__dict__:
                         best_hyperparams[hyperparameter] = hyper_value
 
-        return best_metric
-        
+        return best_metric, best_hyperparams
+
     def save_results(self):
         """
         Save the test set's results
         """
 
-        csv_path = os.path.join('results',f"{self.modality}.csv")
+        csv_path = os.path.join('results', f"{self.modality}.csv")
 
         results = pd.DataFrame([{
             "model": f"{self.model_type}",
@@ -142,7 +185,25 @@ class BaseModel(ABC):
 
         if os.path.exists(csv_path):
             previous_results = pd.read_csv(csv_path)
-            previous_results = previous_results[previous_results.model != self.model_type] #keep the latest one
-            results = pd.concat([results, previous_results], axis = 0)
+            # keep the latest one
+            previous_results = previous_results[previous_results.model !=
+                                                self.model_type]
+            results = pd.concat([results, previous_results], axis=0)
 
         results.to_csv(csv_path, index=False)
+
+    def init_preprocessor(self, **kwargs):
+        if kwargs['modality'] == 'mda_auditor':
+            self.tfidf_dim = kwargs['tfidf_dim']
+            self.ngram_range = kwargs['ngram_range']
+            return TFIDFpreprocessor(**kwargs)
+        elif kwargs['modality'] == 'financial':
+            self.imputer = kwargs['imputer']
+            self.standardize = kwargs['standardize']
+            return MeanImputer(kwargs['imputer']) if kwargs['imputer'] else PASSpreprocessor()
+        elif kwargs['modality'] == 'multimodal':
+            self.tfidf_dim = kwargs['tfidf_dim']
+            self.ngram_range = kwargs['ngram_range']
+            self.imputer = kwargs['imputer']
+            self.standardize = kwargs['standardize']
+            return CONCATpreprocessor(**kwargs)

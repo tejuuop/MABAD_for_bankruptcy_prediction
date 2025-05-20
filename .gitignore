@@ -6,3 +6,4 @@ subset_mda_auditor.csv
 *.log
 *.json
 *.pkl
+*.pth

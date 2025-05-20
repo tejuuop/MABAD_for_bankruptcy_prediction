@@ -1,4 +1,8 @@
 from  models.xgboost import XGBoost
+from models.catboost import CatBoost
+from models.sgd import SGD
+from models.devnet import DevNet
+
 import pandas as pd 
 import os 
 from sklearn.model_selection import train_test_split
@@ -7,7 +11,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from joblib import dump, load
 import pickle
 import numpy as np
-
+import ast
 
 from utils.logger import  get_logger
 
@@ -58,9 +62,30 @@ def get_data(modality, subset):
         
         return (financial[0], mda_auditor[0]), financial[1], (financial[2], mda_auditor[2]), financial[3], (financial[4], mda_auditor[4]), financial[5]
 
-def get_model(**kwargs):
+def init_model(**kwargs):
     model_type = kwargs['model_type']
     
     if model_type == 'XGBoost':
         return XGBoost(**kwargs)
+    elif model_type == 'CatBoost':
+        return CatBoost(**kwargs)
+    elif model_type == 'SGD':
+        return SGD(**kwargs)
+    elif model_type == 'DevNet':
+        return DevNet(**kwargs)
     
+def init_model_from_hyperparams(hyperparms_path, **kwargs):
+    model_type = kwargs['model_type']
+    
+    if model_type == 'XGBoost':
+        return XGBoost.from_hyperparams(hyperparms_path)
+    elif model_type == 'SGD':
+        return SGD.from_hyperparams(hyperparms_path)
+    elif model_type == 'DevNet':
+        return DevNet.from_hyperparams(hyperparms_path)
+    
+def parse_input(ctx, param, value):
+    if value.startswith('['):
+        return ast.literal_eval(value)
+    else:
+        return [int(x.strip()) for x in value.split(',')]
