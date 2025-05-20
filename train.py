@@ -13,7 +13,7 @@ from config import VAL_METRIC_TO_OPTIMIZE
 ################# Preprocessing #################
 @click.option('--tfidf_dim', default=500, type=int)
 @click.option('--imputer', default=None)
-@click.option('--standardize', default=True,  type=bool)
+@click.option('--standardize', default=False,  type=bool)
 @click.option('--ngram_range', default=(1, 1),  type=tuple)
 #################### Universal ####################
 @click.option('--learning_rate', default=0.03, type=float)
@@ -21,7 +21,7 @@ from config import VAL_METRIC_TO_OPTIMIZE
 @click.option('--batch_size', default=64, type=int)
 @click.option('--device', type=click.Choice(['cuda', 'cpu']), default='cuda')
 @click.option('--weight_decay', default=1e-6, type=float)
-@click.option('--layers', callback=utils.parse_input, help="Layer sizes like '[128,64,32]' or '128,64,32'")
+@click.option('--layers', callback=utils.parse_input, help="Layer sizes like '[128,64,32]' or '128,64,32'", default=[])
 #################### XGBoost ####################
 @click.option('--n_estimators', default=100, type=int)
 @click.option('--max_depth', default=10, type=int)
