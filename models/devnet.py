@@ -32,8 +32,8 @@ class DevNet(BaseModel,nn.Module):
         self.weight_decay = kwargs['weight_decay']
         self.relu = nn.ReLU()
         self._preprocessor = self.init_preprocessor(**kwargs)
-        self.input_d = kwargs.get('input_d', -1)
-        self.threshold = kwargs.get('threshold', -1)
+        self.input_d = kwargs.get('input_d', None)
+        self.threshold = kwargs.get('threshold', None)
 
     @property
     def preprocessor(self) -> BasePreprocessor:
@@ -46,17 +46,11 @@ class DevNet(BaseModel,nn.Module):
 
         self.input_d = X.shape[1]
 
-        layers = [self.input_d] + self.layers
-        self.mlp = nn.ModuleList(
-            [nn.Linear(layers[i], layers[i+1]) for i in range(len(layers) - 1)])
-        self.mlp.append(nn.Linear(layers[-1], 1))
-
-        self.to(self.device)
-
+        self._construct_model()
         self._initialize_weights()
 
         X = torch.Tensor(X).to(self.device)
-        y = torch.Tensor(y).to(self.device)
+        y = torch.Tensor(y.values).to(self.device)
 
         positives = X[y == 1]
         negatives = X[y == 0] 
@@ -132,7 +126,7 @@ class DevNet(BaseModel,nn.Module):
         logger.info("Model saved!")
 
     def load(self):
-        self.construct_model()
+        self._construct_model()
         path = os.path.join(self.model_dir_path, "devnet.pth")
         logger.info(f"Loading model from {path} ...")
         self.load_state_dict(torch.load(path))  
@@ -153,7 +147,7 @@ class DevNet(BaseModel,nn.Module):
                 x = self.relu(x)
         return x
     
-    def construct_model(self):
+    def _construct_model(self):
         layers = [self.input_d] + self.layers
         
         self.mlp = nn.ModuleList(

@@ -6,7 +6,7 @@ import time
 
 
 @click.command()
-@click.option('--model_type', type=click.Choice(['XGBoost','CatBoost','SGD','DevNet']))
+@click.option('--model_type', type=click.Choice(['XGBoost','CatBoost','SGD','DevNet','DeepSAD']))
 @click.option('--modality', type=click.Choice(['mda_auditor','financial', 'multimodal']))
 @click.option('--subset', type=bool, default = True)
 @click.option('--device', type=click.Choice(['cuda', 'cpu']), default='cuda')

@@ -7,16 +7,21 @@ from config import VAL_METRIC_TO_OPTIMIZE
 
 
 @click.command()
-@click.option('--model_type', type=click.Choice(['XGBoost', 'CatBoost', 'SGD', 'DevNet']))
+@click.option('--model_type', type=click.Choice(['XGBoost', 'CatBoost', 'SGD', 'DevNet','DeepSAD']))
 @click.option('--modality', type=click.Choice(['mda_auditor', 'financial', 'multimodal']))
-@click.option('--subset', type=bool, default=True)
+@click.option('--subset', type=bool, default=False)
 ################# Preprocessing #################
 @click.option('--tfidf_dim', default=500, type=int)
 @click.option('--imputer', default=None)
-@click.option('--standardize', default=False,  type=bool)
+@click.option('--standardize', default=True,  type=bool)
 @click.option('--ngram_range', default=(1, 1),  type=tuple)
 #################### Universal ####################
 @click.option('--learning_rate', default=0.03, type=float)
+@click.option('--num_epochs', default=100, type=int)
+@click.option('--batch_size', default=64, type=int)
+@click.option('--device', type=click.Choice(['cuda', 'cpu']), default='cuda')
+@click.option('--weight_decay', default=1e-6, type=float)
+@click.option('--layers', callback=utils.parse_input, help="Layer sizes like '[128,64,32]' or '128,64,32'")
 #################### XGBoost ####################
 @click.option('--n_estimators', default=100, type=int)
 @click.option('--max_depth', default=10, type=int)
@@ -30,17 +35,16 @@ from config import VAL_METRIC_TO_OPTIMIZE
 @click.option('--penalty', default='l2', type=click.Choice(['l2', 'l1', 'elasticnet']))
 @click.option('--max_iter', default=1000, type=int)
 #################### DevNet ####################
-@click.option('--num_epochs', default=100, type=int)
-@click.option('--batch_size', default=64, type=int)
-@click.option('--device', type=click.Choice(['cuda', 'cpu']), default='cuda')
 @click.option('--l', default=5000, type=int)
 @click.option('--a', default=5, type=int)
 @click.option('--contamination', default=0.01, type=float)
-@click.option('--layers', callback=utils.parse_input, help="Layer sizes like '[128,64,32]' or '128,64,32'")
-@click.option('--weight_decay', default=0.01, type=float)
+#################### DeepSAD ####################
+@click.option('--eta', default=1.0, type=float)
+@click.option('--pretrain', default=False, type=bool)
+
 def exe(model_type, modality, subset, n_estimators, max_depth, learning_rate, objective, tfidf_dim,
         ngram_range, imputer, standardize, n_iterations, depth, loss_function, loss, penalty, max_iter,
-        num_epochs, batch_size, device, l, a, contamination, layers, weight_decay):
+        num_epochs, batch_size, device, l, a, contamination, layers, weight_decay, eta, pretrain):
     start = time.time()
     setup_logger(log_file=os.path.join(
         "logs", f"{modality}", f"{model_type}.log"))

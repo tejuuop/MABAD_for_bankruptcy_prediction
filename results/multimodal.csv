@@ -1,2 +1,0 @@
-model,auc,ap,fbeta,recall_at_precision
-XGBoost,0.93,0.14,0.07,0.21

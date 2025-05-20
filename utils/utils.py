@@ -2,6 +2,7 @@ from  models.xgboost import XGBoost
 from models.catboost import CatBoost
 from models.sgd import SGD
 from models.devnet import DevNet
+from models.deepsad import DeepSAD
 
 import pandas as pd 
 import os 
@@ -73,6 +74,8 @@ def init_model(**kwargs):
         return SGD(**kwargs)
     elif model_type == 'DevNet':
         return DevNet(**kwargs)
+    elif model_type == 'DeepSAD':
+        return DeepSAD(**kwargs)
     
 def init_model_from_hyperparams(hyperparms_path, **kwargs):
     model_type = kwargs['model_type']
@@ -83,6 +86,8 @@ def init_model_from_hyperparams(hyperparms_path, **kwargs):
         return SGD.from_hyperparams(hyperparms_path)
     elif model_type == 'DevNet':
         return DevNet.from_hyperparams(hyperparms_path)
+    elif model_type == 'DeepSAD':
+        return DeepSAD.from_hyperparams(hyperparms_path)
     
 def parse_input(ctx, param, value):
     if value.startswith('['):
