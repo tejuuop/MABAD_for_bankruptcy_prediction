@@ -82,6 +82,8 @@ def init_model_from_hyperparams(hyperparms_path, **kwargs):
     
     if model_type == 'XGBoost':
         return XGBoost.from_hyperparams(hyperparms_path)
+    elif model_type == 'CatBoost':
+        return CatBoost.from_hyperparams(hyperparms_path)
     elif model_type == 'SGD':
         return SGD.from_hyperparams(hyperparms_path)
     elif model_type == 'DevNet':

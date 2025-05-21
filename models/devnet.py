@@ -64,7 +64,7 @@ class DevNet(BaseModel,nn.Module):
 
         self.train()
 
-        for _ in tqdm(range(self.num_epochs)):
+        for epoch in tqdm(range(self.num_epochs)):
             epoch_loss = 0
             for neg_batch in dataloader:
                 optimizer.zero_grad()
@@ -91,6 +91,8 @@ class DevNet(BaseModel,nn.Module):
                 loss.backward()
                 optimizer.step()
                 epoch_loss += loss.item()
+
+            logger.info(f"Epoch: {epoch+1}, loss (sum): {epoch_loss}")
 
         self.eval()
         with torch.no_grad():

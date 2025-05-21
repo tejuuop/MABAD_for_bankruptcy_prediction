@@ -29,7 +29,8 @@ Usage: <br>
 
 2) Move `/home/andreasideras/research_ideas/BankruptcyPredictionAD/data/` `mda_auditor.csv`, `numerical.csv`, `subset_mda_auditor.csv` and `subset_numerical.csv` to `/data` folder.  Subset files are just smaller dense datasets for quick experimentation (use --subset True) (<span style="color:red">INTERNAL-REMOVE IT</span>)
 
-2) You can run any modality by giving the argument --modality a value from {financial, mda_auditor, multimodal}, for example:
+
+3) You can run any modality by giving the argument --modality a value from {financial, mda_auditor, multimodal}, for example:
 
 
     `python train.py --model_type XGBoost --modality multimodal --n_estimators 100 --max_depth 10 --subset False --tfidf_dim 1000`
