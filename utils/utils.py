@@ -48,13 +48,13 @@ def time_split(data):
     test_df.set_index('uid', inplace=True)
 
     y_train = train_df['label'] 
-    X_train = train_df.drop(columns=['label'])
+    X_train = train_df.drop(columns=['label','year'])
 
     y_val = val_df['label'] 
-    X_val = val_df.drop(columns=['label'])
+    X_val = val_df.drop(columns=['label','year'])
 
     y_test = test_df['label'] 
-    X_test = test_df.drop(columns=['label'])
+    X_test = test_df.drop(columns=['label','year'])
 
     logger.info(f"Train shape: {X_train.shape}")
     logger.info(f"val shape: {X_val.shape}")
