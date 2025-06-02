@@ -200,7 +200,7 @@ class BaseModel(ABC):
         elif kwargs['modality'] == 'financial':
             self.imputer = kwargs['imputer']
             self.standardize = kwargs['standardize']
-            return MeanImputer(kwargs['imputer']) if kwargs['imputer'] else PASSpreprocessor()
+            return MeanImputer(**kwargs) if kwargs['imputer'] else PASSpreprocessor()
         elif kwargs['modality'] == 'multimodal':
             self.tfidf_dim = kwargs['tfidf_dim']
             self.ngram_range = kwargs['ngram_range']

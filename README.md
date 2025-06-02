@@ -2,7 +2,7 @@
 We propose a multimodal approach designed to handle sparse data in the task of bankruptcy prediction. <br>
 
 
-|        Frozen Data Split               |        |
+|        Stratified Data Split              |        |
 |----------------------------------|-------------|
 |Training samples | 27328|
 |Validation samples | 3912 |
@@ -10,6 +10,17 @@ We propose a multimodal approach designed to handle sparse data in the task of b
 |Training <em>bankrupt</em> samples | 134|
 |Validation <em>bankrupt</em> samples | 19 |
 |Test <em>bankrupt </em> samples | 39|
+
+<br>
+
+|        Time-based Data Split              |        |
+|----------------------------------|-------------|
+|Training samples (from 1999-12-31 to 2017-12-31) | 29752|
+|Validation samples (from 2018-01-01 to 2018-12-31) | 2908 |
+|Test samples (from 2019-01-01 to 2021-10-31)| 6381|
+|Training <em>bankrupt</em> samples | 126|
+|Validation <em>bankrupt</em> samples | 19 |
+|Test <em>bankrupt </em> samples | 47|
 
 <br>
 
@@ -27,7 +38,7 @@ Usage: <br>
 
 1) git clone
 
-2) Move `/home/andreasideras/research_ideas/BankruptcyPredictionAD/data/` `mda_auditor.csv`, `numerical.csv`, `subset_mda_auditor.csv` and `subset_numerical.csv` to `/data` folder.  Subset files are just smaller dense datasets for quick experimentation (use --subset True) (<span style="color:red">INTERNAL-REMOVE IT</span>)
+2) Move `/home/andreasideras/research_ideas/BankruptcyPredictionAD/data/` `mda_auditor.csv`, `numerical.csv`, `subset_mda_auditor.csv` and `subset_numerical.csv` to `/data` folder.  Subset files are just smaller dense datasets for quick experimentation (use --subset True) (<span style="color:red">INTERNAL-REMOVE IT</span>). You can use either a stratified or a time-split on the bankrupt cases setting --split from values {'stratified','time'}.
 
 
 3) You can run any modality by giving the argument --modality a value from {financial, mda_auditor, multimodal}, for example:

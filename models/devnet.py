@@ -44,6 +44,8 @@ class DevNet(BaseModel,nn.Module):
         X = self._preprocessor.fit_transform(X)
         self._preprocessor.save()
 
+        
+
         self.input_d = X.shape[1]
 
         self._construct_model()
@@ -92,7 +94,7 @@ class DevNet(BaseModel,nn.Module):
                 optimizer.step()
                 epoch_loss += loss.item()
 
-            logger.info(f"Epoch: {epoch+1}, loss (sum): {epoch_loss}")
+            logger.info(f"Epoch: {epoch+1}/{self.num_epochs}, loss (sum): {epoch_loss}")
 
         self.eval()
         with torch.no_grad():
