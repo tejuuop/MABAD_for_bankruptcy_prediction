@@ -1,3 +1,4 @@
 model,auc,ap,fbeta,recall_at_precision
-CatBoost,0.93,0.20,0.00,0.23
+SGD,0.7,0.02,0.03,0.02
+CatBoost,0.93,0.2,0.0,0.23
 XGBoost,0.93,0.23,0.06,0.28

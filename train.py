@@ -7,7 +7,7 @@ from config import VAL_METRIC_TO_OPTIMIZE
 
 
 @click.command()
-@click.option('--model_type', type=click.Choice(['XGBoost', 'CatBoost', 'SGD', 'DevNet','DeepSAD','CE']), default = 'CE')
+@click.option('--model_type', type=click.Choice(['XGBoost', 'CatBoost', 'SGD', 'DevNet','DeepSAD','CE', 'TabPFN']), default = 'CE')
 @click.option('--modality', type=click.Choice(['mda_auditor', 'financial', 'multimodal']), default='financial')
 @click.option('--subset', type=bool, default=False)
 @click.option('--split', type=click.Choice(['stratified','time']), default='time')

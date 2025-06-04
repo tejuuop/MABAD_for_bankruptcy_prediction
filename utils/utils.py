@@ -4,6 +4,7 @@ from models.sgd import SGD
 from models.devnet import DevNet
 from models.deepsad import DeepSAD
 from models.context_embedder import CE
+from models.tabpfn import TabPFN
 
 import pandas as pd 
 import os 
@@ -117,6 +118,8 @@ def init_model(**kwargs):
         return DeepSAD(**kwargs)
     elif model_type == 'CE':
         return CE(**kwargs)
+    elif model_type == 'TabPFN':
+        return TabPFN(**kwargs)
     
 def init_model_from_hyperparams(hyperparms_path, **kwargs):
     model_type = kwargs['model_type']
@@ -133,6 +136,8 @@ def init_model_from_hyperparams(hyperparms_path, **kwargs):
         return DeepSAD.from_hyperparams(hyperparms_path)
     elif model_type == 'CE':
         return CE.from_hyperparams(hyperparms_path)
+    elif model_type == 'TabPFN':
+        return TabPFN.from_hyperparams(hyperparms_path)
     
 def parse_input(ctx, param, value):
     if value.startswith('['):
