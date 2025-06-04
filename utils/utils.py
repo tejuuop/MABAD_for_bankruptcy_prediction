@@ -23,7 +23,7 @@ def time_split(data):
 
     data['year'] = data['uid'].apply(lambda x : x.split('__')[1])
     data['year'] = pd.to_datetime(data['year'])
-    data = data.sort_values('year').reset_index()
+    data = data.sort_values('year').reset_index(drop=True)
 
     positives = data[data['label'] == 1].copy()
 

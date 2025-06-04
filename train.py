@@ -9,12 +9,12 @@ from config import VAL_METRIC_TO_OPTIMIZE
 @click.command()
 @click.option('--model_type', type=click.Choice(['XGBoost', 'CatBoost', 'SGD', 'DevNet','DeepSAD','CE']), default = 'CE')
 @click.option('--modality', type=click.Choice(['mda_auditor', 'financial', 'multimodal']), default='financial')
-@click.option('--subset', type=bool, default=True)
+@click.option('--subset', type=bool, default=False)
 @click.option('--split', type=click.Choice(['stratified','time']), default='time')
 ################# Preprocessing #################
-@click.option('--tfidf_dim', default=500, type=int)
+@click.option('--tfidf_dim', default=1000, type=int)
 @click.option('--imputer', default=None)
-@click.option('--standardize', default=True,  type=bool)
+@click.option('--standardize', default=False,  type=bool)
 @click.option('--ngram_range', default=(1, 1),  type=tuple)
 #################### Universal ####################
 @click.option('--learning_rate', default=0.03, type=float)
@@ -38,7 +38,7 @@ from config import VAL_METRIC_TO_OPTIMIZE
 #################### DevNet ####################
 @click.option('--l', default=5000, type=int)
 @click.option('--a', default=5, type=int)
-@click.option('--contamination', default=0.0001, type=float)
+@click.option('--contamination', default=0.01, type=float)
 #################### DeepSAD ####################
 @click.option('--eta', default=1.0, type=float)
 @click.option('--pretrain', default=False, type=bool)
@@ -84,8 +84,6 @@ def exe(model_type, modality, subset, n_estimators, max_depth, learning_rate, ob
     elapsed = end - start
     formatted = time.strftime("%H:%M:%S", time.gmtime(elapsed))
     logger.info(f"Execution time: {formatted}")
-    print(f"{model.current_validation_performance}")
-
 
 if __name__ == '__main__':
     exe()

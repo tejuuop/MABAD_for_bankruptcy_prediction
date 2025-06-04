@@ -40,8 +40,7 @@ class CE(BaseModel, nn.Module):
         self.feats_context_projection =  None 
 
         self.classifier = nn.Sequential(
-            nn.Linear(self.feats_context_layers[-1], self.classifier_hidden_dim),
-            # nn.Linear(56, self.classifier_hidden_dim),
+            nn.Linear(self.feats_context_layers[-1]*2, self.classifier_hidden_dim),
             nn.ReLU(),
             nn.Linear(self.classifier_hidden_dim, 1)
         )
@@ -71,8 +70,6 @@ class CE(BaseModel, nn.Module):
         self._preprocessor.save()
        
         indices = torch.arange(len(X))  
-        print(indices.shape)
-        print(X.shape)
 
         trainset = torch.utils.data.TensorDataset(torch.from_numpy(X).float(), torch.from_numpy(y.values), indices)
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=self.batch_size, shuffle=True)
@@ -100,7 +97,7 @@ class CE(BaseModel, nn.Module):
 
     def predict(self, X):
         self._preprocessor.load()
-        X = self._preprocessor.transform(X)
+        X = self._preprocessor.transform(X.values)
         outputs = self.predict_proba(X)
         preds = (outputs > 0.5).astype(int)
         return pd.Series(preds)
@@ -108,7 +105,7 @@ class CE(BaseModel, nn.Module):
     def predict_proba(self, X):
         self._preprocessor.load()
         X = self._preprocessor.transform(X)
-        X=torch.from_numpy(X).float()
+        X = torch.from_numpy(X).float()
         return self(X, torch.arange(len(X))  ).detach().numpy().flatten()
 
     def save(self):
@@ -143,8 +140,8 @@ class CE(BaseModel, nn.Module):
 
     def forward(self, X, indices):
 
-        contextualized = self.feats_value_projection(X)
-        # context = self.I[indices] @ self.C
-        # context = self.feats_context_projection(context)
-        # contextualized = torch.cat((X, context), dim=-1)
+        X = self.feats_value_projection(X)
+        context = self.I[indices] @ self.C
+        context = self.feats_context_projection(context)
+        contextualized = torch.cat((X, context), dim=-1)
         return self.classifier(contextualized)
