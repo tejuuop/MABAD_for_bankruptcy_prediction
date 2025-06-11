@@ -7,8 +7,8 @@ from config import VAL_METRIC_TO_OPTIMIZE
 
 
 @click.command()
-@click.option('--model_type', type=click.Choice(['XGBoost', 'CatBoost', 'SGD', 'DevNet','DeepSAD','CE', 'TabPFN']), default = 'CE')
-@click.option('--modality', type=click.Choice(['mda_auditor', 'financial', 'multimodal']), default='financial')
+@click.option('--model_type', type=click.Choice(['XGBoost', 'CatBoost', 'SGD', 'DevNet','DeepSAD','CE', 'TabPFN', 'TabNet','XGBOD']), required=True)
+@click.option('--modality', type=click.Choice(['mda_auditor', 'financial', 'multimodal']), required=True)
 @click.option('--subset', type=bool, default=False)
 @click.option('--split', type=click.Choice(['stratified','time']), default='time')
 ################# Preprocessing #################
@@ -16,6 +16,7 @@ from config import VAL_METRIC_TO_OPTIMIZE
 @click.option('--imputer', default=None)
 @click.option('--standardize', default=False,  type=bool)
 @click.option('--ngram_range', default=(1, 1),  type=tuple)
+@click.option('--num_dense_cols', default=None, type=int)
 #################### Universal ####################
 @click.option('--learning_rate', default=0.03, type=float)
 @click.option('--num_epochs', default=10, type=int)
@@ -49,7 +50,7 @@ from config import VAL_METRIC_TO_OPTIMIZE
 
 def exe(model_type, modality, subset, n_estimators, max_depth, learning_rate, objective, tfidf_dim,
         ngram_range, imputer, standardize, n_iterations, depth, loss_function, loss, penalty, max_iter,
-        num_epochs, batch_size, device, l, a, contamination, layers, weight_decay, eta, pretrain,feats_value_layers,feats_context_layers,classifier_hidden_dim,split):
+        num_epochs, batch_size, device, l, a, contamination, layers, weight_decay, eta, pretrain,feats_value_layers,feats_context_layers,classifier_hidden_dim,split, num_dense_cols):
     start = time.time()
     setup_logger(log_file=os.path.join(
         "logs", f"{modality}", f"{model_type}.log"))
@@ -76,9 +77,10 @@ def exe(model_type, modality, subset, n_estimators, max_depth, learning_rate, ob
         logger.info(
             f"Previous was {previous_best_validation_performance}. Current is {model.current_validation_performance}")
         model.save()
-        model.save_hyperparameters(qualify_for_testing=True)
+        model.preprocessor.save()
+        model.save_hyperparameters(args, qualify_for_testing=True)
     else:
-        model.save_hyperparameters(qualify_for_testing=False)
+        model.save_hyperparameters(args, qualify_for_testing=False)
 
     end = time.time()
     elapsed = end - start

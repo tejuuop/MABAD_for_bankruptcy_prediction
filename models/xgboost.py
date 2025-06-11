@@ -2,8 +2,6 @@ from xgboost import XGBClassifier
 from models.base_model import BaseModel
 from preprocessing.base_preprocessor import BasePreprocessor
 import cupy as cp
-
-
 from utils.logger import  get_logger
 
 
@@ -14,7 +12,6 @@ class XGBoost(BaseModel):
 
         self.model_type = kwargs['model_type']  
         self.modality = kwargs['modality']
-
         self.n_estimators = kwargs['n_estimators']
         self.max_depth = kwargs['max_depth'] 
         self.learning_rate = kwargs['learning_rate']
@@ -30,20 +27,20 @@ class XGBoost(BaseModel):
 
     def fit(self, X, y):
         X = self._preprocessor.fit_transform(X)
+        logger.info(f"[Training] After preprocessing X shape is {X.shape}")
         X = cp.array(X)  
         y = cp.array(y)
-        self._preprocessor.save()
         self.clf.fit(X, y)
     
     def predict(self, X):
-        self._preprocessor.load()
         X=self._preprocessor.transform(X)
+        logger.info(f"[Training] After preprocessing X shape is {X.shape}")
         X = cp.array(X) 
         return self.clf.predict(X)
     
     def predict_proba(self, X):
-        self._preprocessor.load()
         X=self._preprocessor.transform(X)
+        logger.info(f"[Training] After preprocessing X shape is {X.shape}")
         X = cp.array(X) 
         return self.clf.predict_proba(X)[:,1]   
     

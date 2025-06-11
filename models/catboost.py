@@ -36,16 +36,13 @@ class CatBoost(BaseModel):
 
     def fit(self, X, y):
         X = self._preprocessor.fit_transform(X)
-        self._preprocessor.save()
         self.clf.fit(X, y)
 
     def predict(self, X):
-        self._preprocessor.load()
         X = self._preprocessor.transform(X)
         return self.clf.predict(X)
 
     def predict_proba(self, X):
-        self._preprocessor.load()
         X = self._preprocessor.transform(X)
         return self.clf.predict_proba(X)[:,1]   
 

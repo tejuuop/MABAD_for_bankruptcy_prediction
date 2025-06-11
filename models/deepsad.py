@@ -35,7 +35,6 @@ class DeepSAD(BaseModel):
     """
 
     def __init__(self, **kwargs):
-        
         self.model_type = kwargs['model_type']
         self.modality = kwargs['modality']
         self.c = None 
@@ -68,7 +67,6 @@ class DeepSAD(BaseModel):
     
     def fit(self, X, y):
         X = self._preprocessor.fit_transform(X)
-        self._preprocessor.save()
         self.input_d = X.shape[1]
         self._construct_model()
 
@@ -80,7 +78,6 @@ class DeepSAD(BaseModel):
         
 
     def predict(self, X):
-        self._preprocessor.load()
         X = self._preprocessor.transform(X)
         self.net.eval()
         X = torch.Tensor(X).to(self.device)
@@ -90,7 +87,6 @@ class DeepSAD(BaseModel):
         return np.where(scores > self.threshold, 1, 0)
 
     def predict_proba(self, X):
-        self._preprocessor.load()
         X = self._preprocessor.transform(X)
         self.net.eval()
         X = torch.Tensor(X).to(self.device)

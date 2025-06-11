@@ -7,3 +7,4 @@ subset_mda_auditor.csv
 *.json
 *.pkl
 *.pth
+TabNet/

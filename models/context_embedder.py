@@ -17,7 +17,6 @@ class CE(BaseModel, nn.Module):
     def __init__(self, **kwargs):
 
         nn.Module.__init__(self)
-
         self.model_type = kwargs['model_type']
         self.modality = kwargs['modality']
         self.batch_size = kwargs['batch_size']
@@ -67,7 +66,6 @@ class CE(BaseModel, nn.Module):
         
 
         X = self._preprocessor.fit_transform(X)
-        self._preprocessor.save()
        
         indices = torch.arange(len(X))  
 
@@ -96,14 +94,12 @@ class CE(BaseModel, nn.Module):
             logger.info(f"Epoch: {epoch+1}/{self.num_epochs}, loss (sum): {epoch_loss}")
 
     def predict(self, X):
-        self._preprocessor.load()
         X = self._preprocessor.transform(X.values)
         outputs = self.predict_proba(X)
         preds = (outputs > 0.5).astype(int)
         return pd.Series(preds)
     
     def predict_proba(self, X):
-        self._preprocessor.load()
         X = self._preprocessor.transform(X)
         X = torch.from_numpy(X).float()
         return self(X, torch.arange(len(X))  ).detach().numpy().flatten()

@@ -15,8 +15,7 @@ class TabPFN(BaseModel):
         self.model_type = kwargs['model_type']
         self.modality = kwargs['modality']
 
-
-        self.clf = TabPFNClassifier(random_state=42, ignore_pretraining_limits=True)
+        self.clf = TabPFNClassifier(random_state=42, ignore_pretraining_limits=True, device="cuda")
 
         self._preprocessor = PASSpreprocessor()
         
@@ -25,16 +24,13 @@ class TabPFN(BaseModel):
     
     def fit(self, X, y):
         X = self._preprocessor.fit_transform(X)
-        self._preprocessor.save()
         self.clf.fit(X, y)
 
     def predict(self, X):
-        self._preprocessor.load()
         X = self._preprocessor.transform(X)
         return self.clf.predict(X)
     
     def predict_proba(self, X):
-        self._preprocessor.load()
         X = self._preprocessor.transform(X)
         return self.clf.predict_proba(X)[:,1]
 

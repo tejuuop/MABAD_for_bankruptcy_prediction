@@ -4,7 +4,7 @@ import pickle
 import os
 
 
-class Standardizer(BasePreprocessor):
+class StandardizerPreprocessor(BasePreprocessor):
 
     def __init__(self):
         self.standardizer = StandardScaler()

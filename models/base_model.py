@@ -8,10 +8,9 @@ from config import VAL_METRIC_TO_OPTIMIZE
 import pandas as pd
 from utils.logger import get_logger
 from preprocessing.base_preprocessor import BasePreprocessor
-from preprocessing.tfidf_preprocessor import TFIDFpreprocessor
-from preprocessing.pass_preproccessor import PASSpreprocessor
-from preprocessing.concat_preprocessor import CONCATpreprocessor
-from preprocessing.mean_imputer_preprocessor import MeanImputer
+from preprocessing.financial_preprocessor import FinancialPreprocessor
+from preprocessing.mda_auditor_preprocessor import MDAauditorPreprocessor
+from preprocessing.multimodal_preprocessor import MultimodalPreprocessor
 
 
 logger = get_logger(__name__)
@@ -119,11 +118,15 @@ class BaseModel(ABC):
         else:
             logger.info(f"Test set results: {results}")
 
-    def save_hyperparameters(self, qualify_for_testing=False):
+    def save_hyperparameters(self, hyperparameters, qualify_for_testing=False):
         # save only hyperparameter class attributes
-        hyperparameters = {k: v for k, v in self.__dict__.items() if isinstance(
-            v, (int, float, str, bool, type(None), tuple, list))}
+        # hyperparameters = {k: v for k, v in self.__dict__.items() if isinstance(
+        #     v, (int, float, str, bool, type(None), tuple, list))}
 
+        hyperparameters = {k: v for k, v in hyperparameters.items() if isinstance(v, (int, float, str, bool, type(None), tuple, list))}
+        hyperparameters['ap'] = self.ap
+        hyperparameters['auc'] = self.auc
+        
         timestamp = datetime.now().isoformat()
         new_record = {timestamp: hyperparameters}
         json_path = os.path.join(
@@ -168,7 +171,7 @@ class BaseModel(ABC):
 
         return best_metric, best_hyperparams
 
-    def save_results(self):
+    def save_results(self, model_name):
         """
         Save the test set's results
         """
@@ -176,7 +179,7 @@ class BaseModel(ABC):
         csv_path = os.path.join('results', f"{self.modality}.csv")
 
         results = pd.DataFrame([{
-            "model": f"{self.model_type}",
+            "model": f"{model_name}",
             "auc": f"{self.auc:.2f}",
             "ap": f"{self.ap:.2f}",
             "fbeta": f"{self.fbeta:.2f}",
@@ -187,23 +190,16 @@ class BaseModel(ABC):
             previous_results = pd.read_csv(csv_path)
             # keep the latest one
             previous_results = previous_results[previous_results.model !=
-                                                self.model_type]
+                                                model_name]
             results = pd.concat([results, previous_results], axis=0)
 
         results.to_csv(csv_path, index=False)
 
     def init_preprocessor(self, **kwargs):
+
         if kwargs['modality'] == 'mda_auditor':
-            self.tfidf_dim = kwargs['tfidf_dim']
-            self.ngram_range = kwargs['ngram_range']
-            return TFIDFpreprocessor(**kwargs)
+            return MDAauditorPreprocessor(**kwargs)
         elif kwargs['modality'] == 'financial':
-            self.imputer = kwargs['imputer']
-            self.standardize = kwargs['standardize']
-            return MeanImputer(**kwargs) if kwargs['imputer'] else PASSpreprocessor()
+            return FinancialPreprocessor(**kwargs)
         elif kwargs['modality'] == 'multimodal':
-            self.tfidf_dim = kwargs['tfidf_dim']
-            self.ngram_range = kwargs['ngram_range']
-            self.imputer = kwargs['imputer']
-            self.standardize = kwargs['standardize']
-            return CONCATpreprocessor(**kwargs)
+            return MultimodalPreprocessor(**kwargs)

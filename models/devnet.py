@@ -42,10 +42,6 @@ class DevNet(BaseModel,nn.Module):
     def fit(self, X, y):
         
         X = self._preprocessor.fit_transform(X)
-        self._preprocessor.save()
-
-        
-
         self.input_d = X.shape[1]
 
         self._construct_model()
@@ -106,7 +102,6 @@ class DevNet(BaseModel,nn.Module):
         self.threshold = sorted_train[threshold_index].item()
 
     def predict(self, X):
-        self._preprocessor.load()
         X = self._preprocessor.transform(X)
         self.eval()
         X = torch.Tensor(X).to(self.device)
@@ -115,7 +110,6 @@ class DevNet(BaseModel,nn.Module):
         return np.where(output > self.threshold, 1, 0)
 
     def predict_proba(self, X):
-        self._preprocessor.load()
         X = self._preprocessor.transform(X)
         self.eval()
         X = torch.Tensor(X).to(self.device)

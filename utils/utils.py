@@ -5,14 +5,11 @@ from models.devnet import DevNet
 from models.deepsad import DeepSAD
 from models.context_embedder import CE
 from models.tabpfn import TabPFN
-
+from models.tabnet import TabNet
 import pandas as pd 
 import os 
 from sklearn.model_selection import train_test_split
 from config import RANDOM_SEED
-from sklearn.feature_extraction.text import TfidfVectorizer
-from joblib import dump, load
-import pickle
 import numpy as np
 import ast
 
@@ -120,6 +117,9 @@ def init_model(**kwargs):
         return CE(**kwargs)
     elif model_type == 'TabPFN':
         return TabPFN(**kwargs)
+    elif model_type == 'TabNet':
+        return TabNet(**kwargs)
+
     
 def init_model_from_hyperparams(hyperparms_path, **kwargs):
     model_type = kwargs['model_type']
@@ -138,6 +138,9 @@ def init_model_from_hyperparams(hyperparms_path, **kwargs):
         return CE.from_hyperparams(hyperparms_path)
     elif model_type == 'TabPFN':
         return TabPFN.from_hyperparams(hyperparms_path)
+    elif model_type == 'TabNet':
+        return TabNet.from_hyperparams(hyperparms_path)
+
     
 def parse_input(ctx, param, value):
     if value.startswith('['):
