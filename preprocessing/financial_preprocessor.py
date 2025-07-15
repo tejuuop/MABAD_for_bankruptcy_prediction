@@ -20,14 +20,14 @@ class FinancialPreprocessor(BasePreprocessor):
             else PASSpreprocessor()
         )
         self.standardizer_preprocessor = (
-            StandardizerPreprocessor(**kwargs)
+            StandardizerPreprocessor(source='financial')
             if kwargs.get("standardize", None)
             else PASSpreprocessor()
         )
         self.preprocessors = [
             self.dense_cols_preprocessor,
-            self.imputer_prepocessor,
             self.standardizer_preprocessor,
+            self.imputer_prepocessor            
         ]
 
     def fit_transform(self, X):

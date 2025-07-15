@@ -1,11 +1,10 @@
 from  models.xgboost import XGBoost
 from models.catboost import CatBoost
-from models.sgd import SGD
-from models.devnet import DevNet
+from models.mlp import MLP
+from models.mada import MADA
 from models.deepsad import DeepSAD
-from models.context_embedder import CE
-from models.tabpfn import TabPFN
-from models.tabnet import TabNet
+from models.devnet import DevNet
+from models.hybrid_ocsvm import AutoEncoderSVM
 import pandas as pd 
 import os 
 from sklearn.model_selection import train_test_split
@@ -88,7 +87,7 @@ def get_data(modality, subset, split_strategy):
         else:
             mda_auditor = pd.read_csv(os.path.join(os.getcwd(), 'data', 'mda_auditor.csv'))
         return split(mda_auditor) if split_strategy == 'stratified' else time_split(mda_auditor)
-    elif modality == 'multimodal':
+    elif modality == 'multimodal' or modality == 'multisource':
         if subset:
             financial = pd.read_csv(os.path.join(os.getcwd(), 'data', 'subset_numerical.csv'))
             mda_auditor = pd.read_csv(os.path.join(os.getcwd(), 'data', 'subset_mda_auditor.csv'))
@@ -97,7 +96,8 @@ def get_data(modality, subset, split_strategy):
             mda_auditor = pd.read_csv(os.path.join(os.getcwd(), 'data', 'mda_auditor.csv'))
         financial = split(financial) if split_strategy == 'stratified' else time_split(financial)
         mda_auditor = split(mda_auditor) if split_strategy == 'stratified' else time_split(mda_auditor)
-        
+
+               
         return (financial[0], mda_auditor[0]), financial[1], (financial[2], mda_auditor[2]), financial[3], (financial[4], mda_auditor[4]), financial[5]
 
 def init_model(**kwargs):
@@ -107,18 +107,16 @@ def init_model(**kwargs):
         return XGBoost(**kwargs)
     elif model_type == 'CatBoost':
         return CatBoost(**kwargs)
-    elif model_type == 'SGD':
-        return SGD(**kwargs)
-    elif model_type == 'DevNet':
-        return DevNet(**kwargs)
+    elif model_type == 'MADA':
+        return MADA(**kwargs)
+    elif model_type == 'MLP':
+        return MLP(**kwargs)
     elif model_type == 'DeepSAD':
         return DeepSAD(**kwargs)
-    elif model_type == 'CE':
-        return CE(**kwargs)
-    elif model_type == 'TabPFN':
-        return TabPFN(**kwargs)
-    elif model_type == 'TabNet':
-        return TabNet(**kwargs)
+    elif model_type == 'DevNet':
+        return DevNet(**kwargs)
+    elif model_type == 'OCSVM':
+        return AutoEncoderSVM(**kwargs)
 
     
 def init_model_from_hyperparams(hyperparms_path, **kwargs):
@@ -128,18 +126,16 @@ def init_model_from_hyperparams(hyperparms_path, **kwargs):
         return XGBoost.from_hyperparams(hyperparms_path)
     elif model_type == 'CatBoost':
         return CatBoost.from_hyperparams(hyperparms_path)
-    elif model_type == 'SGD':
-        return SGD.from_hyperparams(hyperparms_path)
-    elif model_type == 'DevNet':
-        return DevNet.from_hyperparams(hyperparms_path)
+    elif model_type == 'MADA':
+        return MADA.from_hyperparams(hyperparms_path)
+    elif model_type == 'MLP':
+        return MLP.from_hyperparams(hyperparms_path)
     elif model_type == 'DeepSAD':
         return DeepSAD.from_hyperparams(hyperparms_path)
-    elif model_type == 'CE':
-        return CE.from_hyperparams(hyperparms_path)
-    elif model_type == 'TabPFN':
-        return TabPFN.from_hyperparams(hyperparms_path)
-    elif model_type == 'TabNet':
-        return TabNet.from_hyperparams(hyperparms_path)
+    elif model_type == 'DevNet':
+        return DevNet.from_hyperparams(hyperparms_path)
+    elif model_type == 'OCSVM':
+        return AutoEncoderSVM.from_hyperparams(hyperparms_path)
 
     
 def parse_input(ctx, param, value):
@@ -147,3 +143,64 @@ def parse_input(ctx, param, value):
         return ast.literal_eval(value)
     else:
         return [int(x.strip()) for x in value.split(',')]
+
+
+def load_fins_tfidfs(return_vectorizers: bool = False):
+    """
+    Load TF-IDF features, numerical tabular features, and labels,
+    reproducing the structure returned by `get_embeddings()`.
+
+    Parameters
+    ----------
+    return_vectorizers : bool, default False
+        If True, also return (mda_vectorizer, auditor_vectorizer) at the end.
+
+    Returns
+    -------
+    X_train, y_train, X_val, y_val, X_test, y_test
+        where each X_* is a 3-tuple:
+        (financial_tabular, mda_tfidf_sparse, auditor_tfidf_sparse)
+    (optionally) mda_vectorizer, auditor_vectorizer
+    """
+    import os
+    import numpy as np
+    import pandas as pd
+    from scipy import sparse
+    import joblib
+
+    tfidf_path = os.path.join(os.getcwd(), 'data', 'tfidfs')   
+    data_path  = os.path.join(os.getcwd(), 'data')              
+
+
+    X_mda_train     = sparse.load_npz(os.path.join(tfidf_path, 'X_mda_train.npz'))
+    X_mda_val       = sparse.load_npz(os.path.join(tfidf_path, 'X_mda_val.npz'))
+    X_mda_test      = sparse.load_npz(os.path.join(tfidf_path, 'X_mda_test.npz'))
+
+    X_auditor_train = sparse.load_npz(os.path.join(tfidf_path, 'X_auditor_train.npz'))
+    X_auditor_val   = sparse.load_npz(os.path.join(tfidf_path, 'X_auditor_val.npz'))
+    X_auditor_test  = sparse.load_npz(os.path.join(tfidf_path, 'X_auditor_test.npz'))
+
+
+    mda_vectorizer     = joblib.load(os.path.join(tfidf_path, 'mda_vectorizer.joblib'))
+    auditor_vectorizer = joblib.load(os.path.join(tfidf_path, 'auditor_vectorizer.joblib'))
+
+    logger.info("Reading financial data...")
+    financial = pd.read_csv(os.path.join(data_path, 'numerical.csv'))
+    logger.info("time splitting...")
+    fin_train, _, fin_val, _, fin_test, _ = time_split(financial)
+    logger.info("Done")
+
+
+    y_train = pd.Series(np.load(os.path.join(tfidf_path, 'y_train.npy')))
+    y_val   = pd.Series(np.load(os.path.join(tfidf_path, 'y_val.npy')))
+    y_test  = pd.Series(np.load(os.path.join(tfidf_path, 'y_test.npy')))
+
+
+    X_train = (fin_train, X_mda_train, X_auditor_train)
+    X_val   = (fin_val,   X_mda_val,   X_auditor_val)
+    X_test  = (fin_test,  X_mda_test,  X_auditor_test)
+
+    if return_vectorizers:
+        return X_train, y_train, X_val, y_val, X_test, y_test, mda_vectorizer, auditor_vectorizer
+    else:
+        return X_train, y_train, X_val, y_val, X_test, y_test

@@ -1,6 +1,18 @@
 # Bankruptcy Prediction using data from 10-K reports
 We propose a multimodal approach designed to handle sparse data in the task of bankruptcy prediction. <br>
 
+## ⚠️ Key Challenges Recap
+
+| Challenge                       | Description                                                                 |
+|--------------------------------|-----------------------------------------------------------------------------|
+| 📊 Severe Class Imbalance       | Next-year bankruptcies are rare (~0.45%), making supervised learning fragile |
+| 🧮 Tabular Data with Missing Values | Missing-by-design or structural NaNs must be handled appropriately         |
+| 📝 Sparse Text Modalities       | Two sources of text (e.g., MD&A and Auditor comments) are high-dimensional and sparse |
+| 🔄 Multimodal Fusion            | Combining heterogeneous sources (tabular + multiple texts) is nontrivial     |
+| 🧪 Limited Labeled Data         | Labels may be unreliable, noisy, or unavailable for certain years or firms   |
+| 📈 Need for Robust Generalization | Overfitting on the majority class is easy; detecting subtle minority patterns is hard |
+
+
 
 |        Stratified Data Split              |        |
 |----------------------------------|-------------|

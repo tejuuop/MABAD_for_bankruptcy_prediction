@@ -1,402 +1,278 @@
-"""
-Official Implementation of DeepSAD: https://github.com/lukasruff/Deep-SAD-PyTorch/tree/master 
-"""
+import os
+import math
+import joblib
+import random
+import numpy as np
 
-import json
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.logger import get_logger
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import DataLoader, Sampler
+from xgboost import XGBClassifier
+
 from models.base_model import BaseModel
-from preprocessing.base_preprocessor import BasePreprocessor
-import os
-import torch
-import torch.optim as optim
-import numpy as np
-import time 
+from utils.logger import get_logger
+from preprocessing.multisource_preprocessor import MultisourcePreprocessor
 
 logger = get_logger(__name__)
 
+def set_all_seeds(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+set_all_seeds(42)
+
+
+class ProportionalPositiveSampler(Sampler):
+    def __init__(self, y, batch_size: int, pos_fraction: float = 0.05):
+        self.y = y
+        self.batch_size = batch_size
+        self.pos_fraction = pos_fraction
+
+        self.pos_idx = np.where(self.y == 1.0)[0]
+        self.neg_idx = np.where(self.y == 0.0)[0]
+
+        self.num_pos = math.ceil(self.pos_fraction * self.batch_size)
+        self.num_neg = self.batch_size - self.num_pos
+
+    def __iter__(self):
+        num_batches = len(self.neg_idx) // self.num_neg
+        for _ in range(num_batches):
+            pos_batch = np.random.choice(self.pos_idx, self.num_pos, replace=True)
+            neg_batch = np.random.choice(self.neg_idx, self.num_neg, replace=False)
+            batch = np.concatenate([pos_batch, neg_batch])
+            np.random.shuffle(batch)
+            yield torch.from_numpy(batch)
+
+    def __len__(self):
+        return len(self.neg_idx) // self.num_neg
 
-class DeepSAD(BaseModel):
-    """A class for the Deep SAD method.
-
-    Attributes:
-        eta: Deep SAD hyperparameter eta (must be 0 < eta).
-        c: Hypersphere center c.
-        net_name: A string indicating the name of the neural network to use.
-        net: The neural network phi.
-        trainer: DeepSADTrainer to train a Deep SAD model.
-        ae_net: The autoencoder network corresponding to phi for network weights pretraining.
-        ae_trainer: AETrainer to train an autoencoder in pretraining.
-        ae_optimizer_name: A string indicating the optimizer to use for pretraining the autoencoder.
-        results: A dictionary to save the results.
-        ae_results: A dictionary to save the autoencoder results.
-    """
-
-    def __init__(self, **kwargs):
-        self.model_type = kwargs['model_type']
-        self.modality = kwargs['modality']
-        self.c = None 
-        self.net = None  
-        self.trainer = None
-
-        self.ae_net = None  
-        self.ae_trainer = None
-        
-        self.layers = kwargs['layers']
-        self.learning_rate = kwargs['learning_rate']
-        self.num_epochs = kwargs['num_epochs']
-        self.lr_milestones = kwargs.get('lr_milestones', None)
-        self.batch_size = kwargs['batch_size']
-        self.weight_decay = kwargs['weight_decay']
-        self.device  = kwargs['device']
-        self.eta = kwargs['eta']
-        self._preprocessor = self.init_preprocessor(**kwargs)
-        self.input_d = kwargs.get('input_d', None)
-        self.threshold = kwargs.get('threshold', None)
-        self.pretrain = kwargs['pretrain']
-        self.contamination = kwargs['contamination']
-
-        self.trainer = DeepSADTrainer(**kwargs)
-        
-    @property
-    def preprocessor(self) -> BasePreprocessor:
-        return self._preprocessor
-
-    
-    def fit(self, X, y):
-        X = self._preprocessor.fit_transform(X)
-        self.input_d = X.shape[1]
-        self._construct_model()
-
-        if self.pretrain:
-            self.pretrain_model(X)
-        self.net = self.trainer.train(X, y, self.net)
-        self.c = self.trainer.c
-        self.threshold = self.trainer.threshold
-        
-
-    def predict(self, X):
-        X = self._preprocessor.transform(X)
-        self.net.eval()
-        X = torch.Tensor(X).to(self.device)
-        with torch.no_grad():
-            outputs = self.net(X)
-            scores = torch.sum((outputs - self.c) ** 2, dim=1).cpu().numpy()
-        return np.where(scores > self.threshold, 1, 0)
-
-    def predict_proba(self, X):
-        X = self._preprocessor.transform(X)
-        self.net.eval()
-        X = torch.Tensor(X).to(self.device)
-        with torch.no_grad():
-            outputs = self.net(X)
-            scores = torch.sum((outputs - self.c) ** 2, dim=1).cpu().numpy()
-        return scores
-    
-
-    def pretrain_model(self, X, lr: float = 0.001, n_epochs: int = 100,
-                 lr_milestones: tuple = (), batch_size: int = 128, weight_decay: float = 1e-6, device: str = 'cuda'):
-        """Pretrains the weights for the Deep SAD network phi via autoencoder."""
-
-        self._construct_ae()
-
-        self.ae_trainer = AETrainer()
-        
-        self.ae_net = self.ae_trainer.train(X, self.ae_net)
-        self.init_network_weights_from_pretraining()
-
-    def init_network_weights_from_pretraining(self):
-        """Initialize the Deep SAD network weights from the encoder weights of the pretraining autoencoder."""
-
-        net_dict = self.net.state_dict()
-        ae_net_dict = self.ae_net.state_dict()
-
-        # Filter out decoder network keys
-        ae_net_dict = {k: v for k, v in ae_net_dict.items() if k in net_dict}
-        # Overwrite values in the existing state_dict
-        net_dict.update(ae_net_dict)
-        # Load the new state_dict
-        self.net.load_state_dict(net_dict)
-
-    def save(self):
-        """Save Deep SAD model to export_model."""
-
-        path = os.path.join(self.model_dir_path, "deepsad.pth")
-        logger.info(f"Saving model at {path} ...")
-        net_dict = self.net.state_dict()
-        ae_net_dict = self.ae_net.state_dict() if self.pretrain else None
-
-        torch.save({'c': self.c,
-                    'net_dict': net_dict,
-                    'ae_net_dict': ae_net_dict}, path)
-        logger.info("Model saved!")
-
-    def load(self):
-        """Load Deep SAD model from model_path."""
-        self._construct_model()
-        self._construct_ae()
-
-        path = os.path.join(self.model_dir_path, "deepsad.pth")
-        logger.info(f"Loading model from {path} ...")
-        model_dict = torch.load(path)
-        self.c = model_dict['c']
-        self.net.load_state_dict(model_dict['net_dict'])
-        self.net.to(self.device)
-
-        
-        if self.pretrain:
-            self.ae_net.load_state_dict(model_dict['ae_net_dict'])
-            self.ae_net.to(self.device)
-
-        
-        
-        logger.info("Model loaded!")
-
-    def _construct_model(self):
-        self.net = MLP(x_dim=self.input_d, h_dims=self.layers[:-1], rep_dim=self.layers[-1], bias=False)
-
-    def _construct_ae(self):
-        self.ae_net = MLP_Autoencoder(x_dim=self.input_d,  h_dims=self.layers[:-1], rep_dim=self.layers[-1], bias =False)
-
-class DeepSADTrainer():
-
-    def __init__(self, **kwargs):
-
-        self.eta = kwargs['eta'] 
-        self.lr = kwargs['learning_rate'] 
-        self.num_epochs = kwargs['num_epochs']
-        self.batch_size = kwargs['batch_size']
-        self.weight_decay = kwargs['weight_decay']
-        self.device = kwargs['device']
-        self.contamination = kwargs['contamination']
-
-        self.c = torch.tensor(kwargs['c'], device=self.device) if kwargs.get('c', None) is not None else None
-        self.eps = 1e-6
-
-
-    def train(self, X, y, net):
-
-        X = torch.Tensor(X).to(self.device)
-        y = torch.Tensor(y.values).to(self.device)
-
-        y[y==1] = -1
-
-        dataset = TensorDataset(X, y)
-        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
-        net = net.to(self.device)
-        optimizer = optim.Adam(net.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-        #scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=self.lr_milestones, gamma=0.1)
-
-        if self.c is None:
-            logger.info('Initializing center c...')
-            self.c = self.init_center_c(loader, net)
-            logger.info('Center c initialized.')
-
-        # Training
-        logger.info('Starting training...')
-        net.train()
-        for epoch in range(self.num_epochs):
-
-            # scheduler.step()
-            # if epoch in self.lr_milestones:
-            #     logger.info('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
-
-            epoch_loss = 0.0
-            n_batches = 0
- 
-            for data in loader:
-                inputs, targets = data
-                inputs, targets = inputs.to(self.device), targets.to(self.device)
-
-                # Zero the network parameter gradients
-                optimizer.zero_grad()
-
-                # Update network parameters via backpropagation: forward + backward + optimize
-                outputs = net(inputs)
-                dist = torch.sum((outputs - self.c) ** 2, dim=1)
-                losses = torch.where(targets == 0, dist, self.eta * ((dist + self.eps) ** targets.float()))
-                loss = torch.mean(losses)
-                loss.backward()
-                optimizer.step()
-
-                epoch_loss += loss.item()
-                n_batches += 1
-
-            # log epoch statistics
-            logger.info(f'| Epoch: {epoch + 1:03}/{self.num_epochs:03} '
-                        f'| Train Loss: {epoch_loss / n_batches:.6f} |')
-        
-        net.eval()
-        with torch.no_grad():
-            self.decision_scores_ = torch.sum((net(X) - self.c) ** 2, dim=1)
-
-        sorted_train, _ = torch.sort(self.decision_scores_, descending=False)
-        threshold_index = (1 - self.contamination) * X.shape[0]
-        threshold_index = int(threshold_index)
-        self.threshold = sorted_train[threshold_index].item()
-        return net
-
-    def init_center_c(self, train_loader: DataLoader, net, eps=0.1):
-        """Initialize hypersphere center c as the mean from an initial forward pass on the data."""
-        n_samples = 0
-        c = torch.zeros(net.rep_dim, device=self.device)
-
-        net.eval()
-        with torch.no_grad():
-            for data in train_loader:
-                # get the inputs of the batch
-                inputs, _ = data
-                inputs = inputs.to(self.device)
-                outputs = net(inputs)
-                n_samples += outputs.shape[0]
-                c += torch.sum(outputs, dim=0)
-
-        c /= n_samples
-
-        # If c_i is too close to 0, set to +-eps. Reason: a zero unit can be trivially matched with zero weights.
-        c[(abs(c) < eps) & (c < 0)] = -eps
-        c[(abs(c) < eps) & (c > 0)] = eps
-
-        return c  
-
-########### PRETRAINING ############
-class AETrainer():
-
-    def __init__(self, optimizer_name: str = 'adam', lr: float = 0.001, n_epochs: int = 150, lr_milestones: tuple = (),
-                 batch_size: int = 512, weight_decay: float = 1e-6, device: str = 'cuda'):
-       
-       self.optimizer_name   = optimizer_name
-       self.lr = lr
-       self.n_epochs = n_epochs
-       self.lr_milestones = lr_milestones
-       self.batch_size = batch_size
-       self.weight_decay = weight_decay
-       self.device = device
-
-
-    def train(self, X, ae_net):
-
-        X = torch.Tensor(X).to(self.device)
-
-        dataset = TensorDataset(X)
-        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
-
-        criterion = nn.MSELoss(reduction='none')
-
-        ae_net = ae_net.to(self.device)
-        criterion = criterion.to(self.device)
-        optimizer = optim.Adam(ae_net.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-        #scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=self.lr_milestones, gamma=0.1)
-
-        # Training
-        logger.info('Starting pretraining...')
-        start_time = time.time()
-        ae_net.train()
-        for epoch in range(self.n_epochs):
-
-            # scheduler.step()
-            # if epoch in self.lr_milestones:
-            #     logger.info('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
-
-            epoch_loss = 0.0
-            n_batches = 0
-            epoch_start_time = time.time()
-            for inputs in loader:
-                
-                inputs = inputs[0].to(self.device)
-
-                optimizer.zero_grad()
-
-                rec = ae_net(inputs)
-                rec_loss = criterion(rec, inputs)
-                loss = torch.mean(rec_loss)
-                loss.backward()
-                optimizer.step()
-
-                epoch_loss += loss.item()
-                n_batches += 1
-
-            # log epoch statistics
-            epoch_train_time = time.time() - epoch_start_time
-            logger.info(f'| Epoch: {epoch + 1:03}/{self.n_epochs:03} | Train Time: {epoch_train_time:.3f}s '
-                        f'| Train Loss: {epoch_loss / n_batches:.6f} |')
-
-        self.train_time = time.time() - start_time
-        logger.info('Pretraining Time: {:.3f}s'.format(self.train_time))
-        logger.info('Finished pretraining.')
-
-        return ae_net
-
-
-class MLP_Decoder(nn.Module):
-
-    def __init__(self, x_dim, h_dims, rep_dim, bias=False):
-        super().__init__()
-
-        self.rep_dim = rep_dim
-
-        neurons = [rep_dim, *h_dims]
-        layers = [Linear_BN_leakyReLU(neurons[i - 1], neurons[i], bias=bias) for i in range(1, len(neurons))]
-
-        self.hidden = nn.ModuleList(layers)
-        self.reconstruction = nn.Linear(h_dims[-1], x_dim, bias=bias)
-        self.output_activation = nn.Sigmoid()
-
-    def forward(self, x):
-        x = x.view(int(x.size(0)), -1)
-        for layer in self.hidden:
-            x = layer(x)
-        x = self.reconstruction(x)
-        return self.output_activation(x)
-
-
-class MLP_Autoencoder(nn.Module):
-
-    def __init__(self, x_dim, h_dims, rep_dim, bias=False):
-        super().__init__()
-
-        self.rep_dim = rep_dim
-        self.encoder = MLP(x_dim, h_dims, rep_dim, bias)
-        self.decoder = MLP_Decoder(x_dim, list(reversed(h_dims)), rep_dim, bias)
-
-    def forward(self, x):
-        x = self.encoder(x)
-        x = self.decoder(x)
-        return x
-    
 
 class MLP(nn.Module):
-
-    def __init__(self, x_dim, h_dims, rep_dim, bias=False):
+    def __init__(self, in_dim: int, hid: int, latent: int):
         super().__init__()
-
-        self.rep_dim = rep_dim
-
-        neurons = [x_dim, *h_dims]
-        layers = [Linear_BN_leakyReLU(neurons[i - 1], neurons[i], bias=bias) for i in range(1, len(neurons))]
-
-        self.hidden = nn.ModuleList(layers)
-        self.code = nn.Linear(h_dims[-1], rep_dim, bias=bias)
+        self.net = nn.Sequential(
+            nn.Linear(in_dim, hid),
+            nn.ReLU(),
+            nn.Linear(hid, latent),
+        )
 
     def forward(self, x):
-        x = x.view(int(x.size(0)), -1)
-        for layer in self.hidden:
-            x = layer(x)
-        return self.code(x)
+        return F.normalize(self.net(x), dim=-1)
 
-class Linear_BN_leakyReLU(nn.Module):
-    """
-    A nn.Module that consists of a Linear layer followed by BatchNorm1d and a leaky ReLu activation
-    """
 
-    def __init__(self, in_features, out_features, bias=False, eps=1e-04):
-        super(Linear_BN_leakyReLU, self).__init__()
+class LeafEmbed(nn.Module):
+    def __init__(self, num_trees: int, num_leaves: int, emb_dim: int):
+        super().__init__()
+        self.embs = nn.ModuleList(
+            [nn.Embedding(num_leaves + 1, emb_dim) for _ in range(num_trees)]
+        )
+        self.num_trees = num_trees
 
-        self.linear = nn.Linear(in_features, out_features, bias=bias)
-        self.bn = nn.BatchNorm1d(out_features, eps=eps, affine=bias)
+    def forward(self, idx):
+        x = 0.0
+        for t, emb in enumerate(self.embs):
+            x = x + emb(idx[:, t])
+        return x / self.num_trees
 
-    def forward(self, x):
-        return F.leaky_relu(self.bn(self.linear(x)))
-    
+
+class DeepSAD(BaseModel):
+    def __init__(self, **kw):
+        self.model_type = kw.get("model_type", "deep_sad")
+        self.modality = kw.get("modality", "multisource")
+
+        self.text_dim = kw.get("tfidf_dim", 1000)
+        self.layers = kw.get("layers", [512, 128])
+        self.latent_dim = self.layers[-1]
+
+        self.epochs = kw.get("num_epochs", 30)
+        self.batch_size = kw.get("batch_size", 512)
+        self.lr = kw.get("learning_rate", 1e-4)
+        self.weight_decay = kw.get("weight_decay", 1e-4)
+        self.patience = kw.get("patience", 15)
+        self.threshold = kw.get("threshold", 0.5)
+        self.margin = kw.get("margin", 0.5)
+
+        self.device = kw.get("device", "cuda" if torch.cuda.is_available() else "cpu")
+        self._pre = MultisourcePreprocessor(**kw)
+
+        self.n_estimators = 100
+        self.max_depth = 0
+        self.xgb_learning_rate = 0.05
+
+        tree_method = "gpu_hist" if self.device.startswith("cuda") else "hist"
+        self.clf = XGBClassifier(
+            n_estimators=self.n_estimators,
+            max_depth=self.max_depth,
+            learning_rate=self.xgb_learning_rate,
+            objective="binary:logistic",
+            tree_method=tree_method,
+            verbosity=0,
+            random_state=42,
+        )
+
+        self.mda_enc = MLP(self.text_dim, self.layers[0], self.latent_dim).to(self.device)
+        self.aud_enc = MLP(self.text_dim, self.layers[0], self.latent_dim).to(self.device)
+
+        self.rep_dim = self.latent_dim * 3
+        self.c = nn.Parameter(torch.zeros(self.rep_dim), requires_grad=False).to(self.device)
+
+    @property
+    def preprocessor(self):
+        return self._pre
+
+    def _encode(self, leaf_idx_tensor, mda_tensor, aud_tensor):
+        z_tab = F.normalize(self.leaf_embed(leaf_idx_tensor), dim=-1)
+        z_mda = self.mda_enc(mda_tensor)
+        z_aud = self.aud_enc(aud_tensor)
+        h = torch.cat([z_tab, z_mda, z_aud], dim=1)
+        return h
+
+    def _sad_loss(self, reps, y_batch, eta=1.0):
+        dist = torch.norm(reps - self.c, dim=1)
+
+        normal_loss = dist[y_batch == 0].pow(2).mean()
+
+        anomaly_loss = (1.0 / (dist[y_batch == 1].pow(2) + 1e-6)).mean()
+
+        return normal_loss + eta * anomaly_loss
+
+
+    def fit(self, X, y, X_val=None, y_val=None):
+        X_tab, X_mda, X_aud = self._pre.fit_transform(X)
+        y_tensor = torch.from_numpy(np.asarray(y, dtype=np.float32)).to(self.device)
+
+        logger.info("Training XGBoost…")
+        self.clf.fit(X_tab, y)
+        leaf_idx = self.clf.apply(X_tab).astype(np.int64)
+        num_trees, num_nodes = leaf_idx.shape[1], int(leaf_idx.max()) + 1
+
+        self.leaf_embed = LeafEmbed(num_trees, num_nodes, self.latent_dim).to(self.device)
+
+        leaf_tensor = torch.from_numpy(leaf_idx).to(self.device)
+        mda_tensor = torch.from_numpy(X_mda).to(self.device)
+        aud_tensor = torch.from_numpy(X_aud).to(self.device)
+
+        # Initialise center c with mean of normal samples
+        with torch.no_grad():
+            reps = self._encode(leaf_tensor, mda_tensor, aud_tensor)
+            self.c.copy_(reps[y_tensor == 0].mean(0))
+
+        params = (
+            list(self.leaf_embed.parameters()) +
+            list(self.mda_enc.parameters()) +
+            list(self.aud_enc.parameters())
+        )
+        optimizer = torch.optim.Adam(params, lr=self.lr, weight_decay=self.weight_decay)
+
+        sampler = ProportionalPositiveSampler(y_tensor.cpu().numpy(), self.batch_size, pos_fraction=0.05)
+        loader = DataLoader(torch.arange(len(y_tensor)), batch_sampler=sampler)
+
+        best_ap = -1
+        for epoch in range(self.epochs):
+            self.leaf_embed.train() ; self.mda_enc.train() ; self.aud_enc.train()
+            total_loss = 0
+
+            for idx in loader:
+                idx_cuda = idx.to(self.device)
+                reps = self._encode(
+                    leaf_tensor[idx_cuda],
+                    mda_tensor[idx_cuda],
+                    aud_tensor[idx_cuda]
+                )
+                y_batch = y_tensor[idx_cuda]
+
+                loss = self._sad_loss(reps, y_batch)
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                total_loss += loss.item()
+
+            logger.info("Epoch %d | loss %.4f", epoch + 1, total_loss / len(loader))
+
+            self.evaluate(X_val, y_val, dataset="val")
+
+            if self.ap > best_ap:
+                logger.info(
+                    "New best validation AP %.4f (prev %.4f) — saving model…",
+                    self.ap,
+                    best_ap,
+                )
+                best_ap = self.ap
+                patience_counter = 0
+                self.save()
+                self.preprocessor.save()
+            else:
+                logger.info(
+                    "Validation AP %.4f did not improve (best %.4f)", self.ap, best_ap
+                )
+                patience_counter += 1
+
+            if patience_counter >= self.patience:
+                logger.info("Early stopping at epoch %d", epoch + 1)
+                break
+
+        self.get_decision_threshold(X_val,y_val)
+
+    @torch.no_grad()
+    def predict_proba(self, X):
+        X_tab, X_mda, X_aud = self._pre.transform(X)
+        leaf_idx = self.clf.apply(X_tab).astype(np.int64)
+
+        leaf_tensor = torch.from_numpy(leaf_idx).to(self.device)
+        mda_tensor = torch.from_numpy(X_mda).to(self.device)
+        aud_tensor = torch.from_numpy(X_aud).to(self.device)
+
+        self.leaf_embed.eval() ; self.mda_enc.eval() ; self.aud_enc.eval()
+        reps = self._encode(leaf_tensor, mda_tensor, aud_tensor)
+        dist = torch.norm(reps - self.c, dim=1)
+        return dist.cpu().numpy()
+
+    def predict(self, X):
+        scores = self.predict_proba(X)
+        return (scores > self.threshold).astype(int)
+
+    def save(self):
+        torch.save(
+            {
+                "leaf_embed": self.leaf_embed.state_dict(),
+                "mda_enc": self.mda_enc.state_dict(),
+                "aud_enc": self.aud_enc.state_dict(),
+                "center": self.c.detach(),
+                "leaf_meta": {
+                    "num_trees": len(self.leaf_embed.embs),
+                    "num_leaves": self.leaf_embed.embs[0].num_embeddings - 1,
+                },
+            },
+            os.path.join(self.model_dir_path, "deep_sad.pt"),
+        )
+
+        joblib.dump(self.clf, os.path.join(self.model_dir_path, "xgb_clf.pkl"))
+        logger.info("DeepSAD model saved → %s", self.model_dir_path)
+
+    def load(self):
+        state = torch.load(
+            os.path.join(self.model_dir_path, "deep_sad.pt"), map_location=self.device
+        )
+
+        leaf_meta = state["leaf_meta"]
+        self.leaf_embed = LeafEmbed(
+            num_trees=leaf_meta["num_trees"],
+            num_leaves=leaf_meta["num_leaves"],
+            emb_dim=self.latent_dim,
+        ).to(self.device)
+
+        self.leaf_embed.load_state_dict(state["leaf_embed"])
+        self.mda_enc.load_state_dict(state["mda_enc"])
+        self.aud_enc.load_state_dict(state["aud_enc"])
+        self.c.copy_(state["center"])
+
+        self.clf = joblib.load(os.path.join(self.model_dir_path, "xgb_clf.pkl"))
+        logger.info("DeepSAD model loaded from %s", self.model_dir_path)

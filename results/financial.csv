@@ -1,5 +1,6 @@
 model,auc,ap,fbeta,recall_at_precision
-XGBoost3000,0.94,0.21,0.00,0.23
+DevNet_100_feats,0.73,0.05,0.15,0.09
+DeepSAD_100_feats,0.84,0.05,0.14,0.11
+XGBoost3000,0.94,0.21,0.0,0.23
 XGBoost,0.93,0.23,0.06,0.28
-SGD,0.7,0.02,0.03,0.02
 CatBoost,0.93,0.2,0.0,0.23

@@ -9,8 +9,9 @@ import pandas as pd
 from utils.logger import get_logger
 from preprocessing.base_preprocessor import BasePreprocessor
 from preprocessing.financial_preprocessor import FinancialPreprocessor
-from preprocessing.mda_auditor_preprocessor import MDAauditorPreprocessor
-from preprocessing.multimodal_preprocessor import MultimodalPreprocessor
+from preprocessing.tfidf_preprocessor import TFIDFpreprocessor
+from preprocessing.multisource_preprocessor import MultisourcePreprocessor
+from preprocessing.embeddings_preprocessor import EmbeddingsPreprocessor
 
 
 logger = get_logger(__name__)
@@ -120,8 +121,8 @@ class BaseModel(ABC):
             logger.info(f"Test set results: {results}")
 
     def save_hyperparameters(self, hyperparameters, qualify_for_testing=False):
-        # save only hyperparameter class attributes
-        hyperparameters = {
+        
+        extra_hyperparameters = {
             k: v
             for k, v in self.__dict__.items()
             if isinstance(
@@ -129,16 +130,16 @@ class BaseModel(ABC):
             )
         }
 
-        hyperparameters2 = {
+        hyperparameters = {
             k: v
             for k, v in hyperparameters.items()
             if isinstance(
                 v, (int, float, str, bool, type(None), tuple, list, pd.Series)
             )
         }
-        hyperparameters2["ap"] = self.ap
-        hyperparameters2["auc"] = self.auc
-        hyperparameters.update(hyperparameters2)
+        # hyperparameters["ap"] = self.ap
+        # hyperparameters["auc"] = self.auc
+        hyperparameters.update(extra_hyperparameters)
 
         timestamp = datetime.now().isoformat()
         new_record = {timestamp: hyperparameters}
@@ -191,7 +192,9 @@ class BaseModel(ABC):
         """
         Save the test set's results
         """
-
+        if self.modality == 'multisource':
+            self.modality = 'multimodal'
+            
         csv_path = os.path.join("results", f"{self.modality}.csv")
 
         results = pd.DataFrame(
@@ -217,8 +220,30 @@ class BaseModel(ABC):
     def init_preprocessor(self, **kwargs):
 
         if kwargs["modality"] == "mda_auditor":
-            return MDAauditorPreprocessor(**kwargs)
+            return TFIDFpreprocessor(**kwargs)
         elif kwargs["modality"] == "financial":
             return FinancialPreprocessor(**kwargs)
-        elif kwargs["modality"] == "multimodal":
-            return MultimodalPreprocessor(**kwargs)
+        elif kwargs["modality"] == "multisource":
+            return MultisourcePreprocessor(**kwargs)
+
+
+    def get_decision_threshold(self, X, y):
+        logger.info("Computing best threshold on validation set...")
+        scores = self.predict_proba(X)
+        lower_bound = np.min(scores)
+        upper_bound = np.max(scores)
+
+        thresholds = np.linspace(start=lower_bound, stop=upper_bound, num=10000)
+        best_threshold = -1
+        best_fbeta = -1
+
+        for threshold in thresholds:
+            preds = np.where(scores > threshold, 1, 0)
+            fbeta = fbeta_score(y_true=y, y_pred=preds, beta=1.5, average="binary")
+            if fbeta > best_fbeta:
+                best_fbeta = fbeta  # <-- missing update in your code
+                best_threshold = threshold
+
+        logger.info(f"Best threshold computed on validation set is {best_threshold}, fbeta score: {best_fbeta}")
+        self.threshold = best_threshold
+

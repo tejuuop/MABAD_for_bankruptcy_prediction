@@ -10,8 +10,8 @@ class ImputerPreprocessor(BasePreprocessor):
 
         strategy = kwargs['imputer']
 
-        if strategy == 'mean':
-            self.imputer = SimpleImputer(strategy='mean')
+        if strategy == 'mean' or strategy == 'median':
+            self.imputer = SimpleImputer(strategy=strategy)
         else:
             self.imputer = SimpleImputer(
                 strategy='constant', fill_value=int(strategy))

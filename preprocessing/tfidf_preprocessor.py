@@ -13,7 +13,9 @@ class TFIDFpreprocessor(BasePreprocessor):
 
         self.tfidf_dim = kwargs['tfidf_dim']
         self.ngram_range = kwargs['ngram_range']
-
+        
+        self.multisource = kwargs.get('multisource', False)
+        print(self.multisource)
         self.mda_vectorizer = TfidfVectorizer(ngram_range=self.ngram_range, max_features=self.tfidf_dim, stop_words = 'english', lowercase = True)
         self.auditor_vectorizer = TfidfVectorizer(ngram_range=self.ngram_range, max_features=self.tfidf_dim, stop_words = 'english', lowercase = True)
 
@@ -21,14 +23,13 @@ class TFIDFpreprocessor(BasePreprocessor):
     def fit_transform(self, X):
         X_mda = self.mda_vectorizer.fit_transform(X['item_7'])
         X_auditor = self.auditor_vectorizer.fit_transform(X['opinion_text'])
-        X = np.concatenate([X_mda.toarray(), X_auditor.toarray()], axis=1)
-        return X
-    
+        return X_mda.toarray(), X_auditor.toarray()
+       
     def transform(self, X):
         X_mda = self.mda_vectorizer.transform(X['item_7'])
         X_auditor = self.auditor_vectorizer.transform(X['opinion_text'])
-        X = np.concatenate([X_mda.toarray(), X_auditor.toarray()], axis=1)
-        return X
+        return X_mda.toarray(), X_auditor.toarray()
+
     
     def save(self):
         mda_path = f"{os.path.join('preprocessing','saved_components','tfidf','mda_vectorizer.pkl')}"

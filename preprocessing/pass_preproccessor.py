@@ -10,9 +10,9 @@ class PASSpreprocessor(BasePreprocessor):
     def transform(self, X):
         return X
     
-    def save(self):
+    def save(self, modality = None):
         pass
             
-    def load(self):
+    def load(self, modality = None):
         pass     
         

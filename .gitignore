@@ -8,3 +8,9 @@ subset_mda_auditor.csv
 *.pkl
 *.pth
 TabNet/
+*.npy
+*.joblib
+*.npz
+*.pth
+*.pth
+*.pt
