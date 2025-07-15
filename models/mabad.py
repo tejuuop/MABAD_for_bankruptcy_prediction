@@ -1,5 +1,5 @@
 """
-MADA with XGBoost‑based leaf‑index embeddings for the tabular modality.
+MABAD with XGBoost‑based leaf‑index embeddings for the tabular modality.
 
 Key changes vs. the median‑imputation version:
     • A supervised XGBClassifier is fitted on the (pre‑processed) tabular features.
@@ -109,7 +109,7 @@ class LeafEmbed(nn.Module):
 
 
 # ───────────────────────── main model ────────────────────────────────────────
-class MADA(BaseModel):
+class MABAD(BaseModel):
 
     # ---------------------------------------------------------------------
     # Initialisation
@@ -401,7 +401,7 @@ class MADA(BaseModel):
         # XGBoost model
         joblib.dump(self.clf, os.path.join(self.model_dir_path, "xgb_clf.pkl"))
 
-        logger.info("MADA model saved → %s", self.model_dir_path)
+        logger.info("MABAD model saved → %s", self.model_dir_path)
 
     def load(self):
         state = torch.load(
@@ -427,8 +427,7 @@ class MADA(BaseModel):
         # XGBoost
         self.clf = joblib.load(os.path.join(self.model_dir_path, "xgb_clf.pkl"))
 
-        logger.info("MADA model loaded from %s", self.model_dir_path)
+        logger.info("MABAD model loaded from %s", self.model_dir_path)
 
-# python train.py --model_type MADA --modality multisource  --layers [512,128] --num_epochs 150 --patience 20 --learning_rate 0.0003  --batch_size 512 --load_tfidfs True --standardize True
 
 

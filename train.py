@@ -7,7 +7,7 @@ from config import VAL_METRIC_TO_OPTIMIZE, SHALLOW_MODELS, NEURAL_MODELS
 
 
 @click.command()
-@click.option('--model_type', type=click.Choice(SHALLOW_MODELS + NEURAL_MODELS), default='MADA' ,required=True)
+@click.option('--model_type', type=click.Choice(SHALLOW_MODELS + NEURAL_MODELS), default='MABAD' ,required=True)
 @click.option('--modality', type=click.Choice(['mda_auditor', 'financial','multisource']),default ='multisource' ,required=True)
 @click.option('--subset', type=bool, default=False)
 @click.option('--split', type=click.Choice(['stratified','time']), default='time')
@@ -40,6 +40,7 @@ from config import VAL_METRIC_TO_OPTIMIZE, SHALLOW_MODELS, NEURAL_MODELS
 #################### DevNet ####################
 @click.option('--l', default=5000, type=int)
 @click.option('--a', default=5, type=int)
+#################### MABAD
 
 
 def exe(model_type, modality, subset, n_estimators, max_depth, learning_rate, objective, tfidf_dim,

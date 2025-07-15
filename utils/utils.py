@@ -1,7 +1,7 @@
 from  models.xgboost import XGBoost
 from models.catboost import CatBoost
 from models.mlp import MLP
-from models.mada import MADA
+from models.mabad import MABAD
 from models.deepsad import DeepSAD
 from models.devnet import DevNet
 from models.hybrid_ocsvm import AutoEncoderSVM
@@ -107,8 +107,8 @@ def init_model(**kwargs):
         return XGBoost(**kwargs)
     elif model_type == 'CatBoost':
         return CatBoost(**kwargs)
-    elif model_type == 'MADA':
-        return MADA(**kwargs)
+    elif model_type == 'MABAD':
+        return MABAD(**kwargs)
     elif model_type == 'MLP':
         return MLP(**kwargs)
     elif model_type == 'DeepSAD':
@@ -126,8 +126,8 @@ def init_model_from_hyperparams(hyperparms_path, **kwargs):
         return XGBoost.from_hyperparams(hyperparms_path)
     elif model_type == 'CatBoost':
         return CatBoost.from_hyperparams(hyperparms_path)
-    elif model_type == 'MADA':
-        return MADA.from_hyperparams(hyperparms_path)
+    elif model_type == 'MABAD':
+        return MABAD.from_hyperparams(hyperparms_path)
     elif model_type == 'MLP':
         return MLP.from_hyperparams(hyperparms_path)
     elif model_type == 'DeepSAD':
