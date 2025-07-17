@@ -220,7 +220,7 @@ class DevNet(BaseModel):
                 logger.info("Early stopping at epoch %d", epoch + 1)
                 break
 
-        self.get_decision_threshold(X_val,y_val)
+        # self.get_decision_threshold(X_val,y_val)
 
     @torch.no_grad()
     def predict_proba(self, X):

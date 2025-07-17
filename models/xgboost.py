@@ -71,20 +71,27 @@ class XGBoost(BaseModel):
         y_np = np.array(y)
 
         dtrain = xgb.DMatrix(X_np, label=y_np)
-
+        
+        num_positives = y.sum()
+        num_negatives = y.shape[0] - num_positives
+        pos_weight = num_negatives / num_positives
+        
         params = {
             "max_depth": self.max_depth,
             "learning_rate": self.learning_rate,
             "eval_metric": "logloss",
             "tree_method": "gpu_hist",
+            "random_state": 42,
+            "seed": 42,
             "objective": "binary:logistic",
+            # "scale_pos_weight": pos_weight
         }
 
         self.clf = xgb.train(
             params=params,
             dtrain=dtrain,
             num_boost_round=self.n_estimators,
-            # obj=focal_loss(alpha=self.alpha, gamma=self.gamma),
+            obj=focal_loss(alpha=self.alpha, gamma=self.gamma),
             verbose_eval=False
         )
 

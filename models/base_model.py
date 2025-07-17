@@ -39,8 +39,10 @@ class BaseModel(ABC):
         metrics = {
             "auc": self.auc,
             "ap": self.ap,
-            "fbeta": self.fbeta,
             "recall_at_precision": self.recall_at_precision,
+            "recall_at_10": self.recall_at_10,
+            "recall_at_50": self.recall_at_50,
+            "recall_at_100": self.recall_at_100,
         }
 
         return metrics[VAL_METRIC_TO_OPTIMIZE]
@@ -89,27 +91,45 @@ class BaseModel(ABC):
 
         self.auc = roc_auc_score(y_score=scores, y_true=y)
         self.ap = average_precision_score(y_score=scores, y_true=y)
-        # we focus on the bankruptcy case with more interest on the recall metric. threshold is 0.5
-        self.fbeta = fbeta_score(y_pred=preds, y_true=y, beta=1.5, average="binary")
 
         # recall_at_precision at threshold τ=number of true positives
         num_of_positives = y.sum()
         sorted_indices = np.argsort(scores)[::-1]
         found_labels = y.reset_index(drop=True).loc[sorted_indices]
+        
         self.recall_at_precision = (
             found_labels[:num_of_positives].sum() / num_of_positives
         )
 
+        self.recall_at_10 = found_labels[:10].sum() / num_of_positives
+        self.recall_at_20 = found_labels[:20].sum() / num_of_positives
+        self.recall_at_30 = found_labels[:30].sum() / num_of_positives
+        self.recall_at_40 = found_labels[:40].sum() / num_of_positives
+        self.recall_at_50 = found_labels[:50].sum() / num_of_positives
+        self.recall_at_100 = found_labels[:100].sum() / num_of_positives
+
+
         self.auc = round(self.auc, 2)
         self.ap = round(self.ap, 2)
-        self.fbeta = round(self.fbeta, 2)
+
         self.recall_at_precision = round(self.recall_at_precision, 2)
+        self.recall_at_10 = round(self.recall_at_10, 2)
+        self.recall_at_20 = round(self.recall_at_20, 2)
+        self.recall_at_30 = round(self.recall_at_30, 2)
+        self.recall_at_40 = round(self.recall_at_40, 2)
+        self.recall_at_50 = round(self.recall_at_50, 2)
+        self.recall_at_100 = round(self.recall_at_100, 2)
 
         results = {
             "model": self.model_type,
             "auc": self.auc,
             "ap": self.ap,
-            "fbeta": self.fbeta,
+            "recall_at_10" : self.recall_at_10,
+            "recall_at_20" : self.recall_at_20,
+            "recall_at_30" : self.recall_at_30,
+            "recall_at_40" : self.recall_at_40,
+            "recall_at_50" : self.recall_at_50,
+            "recall_at_100" : self.recall_at_100,
             "recall_at_precision": self.recall_at_precision,
         }
 
@@ -203,7 +223,12 @@ class BaseModel(ABC):
                     "model": f"{model_name}",
                     "auc": f"{self.auc:.2f}",
                     "ap": f"{self.ap:.2f}",
-                    "fbeta": f"{self.fbeta:.2f}",
+                    "recall_at_10": f"{self.recall_at_10:.2f}",
+                    "recall_at_20": f"{self.recall_at_20:.2f}",
+                    "recall_at_30": f"{self.recall_at_30:.2f}",
+                    "recall_at_40": f"{self.recall_at_40:.2f}",
+                    "recall_at_50": f"{self.recall_at_50:.2f}",
+                    "recall_at_100": f"{self.recall_at_100:.2f}",
                     "recall_at_precision": f"{self.recall_at_precision:.2f}",
                 }
             ]
@@ -227,23 +252,23 @@ class BaseModel(ABC):
             return MultisourcePreprocessor(**kwargs)
 
 
-    def get_decision_threshold(self, X, y):
-        logger.info("Computing best threshold on validation set...")
-        scores = self.predict_proba(X)
-        lower_bound = np.min(scores)
-        upper_bound = np.max(scores)
+    # def get_decision_threshold(self, X, y):
+    #     logger.info("Computing best threshold on validation set...")
+    #     scores = self.predict_proba(X)
+    #     lower_bound = np.min(scores)
+    #     upper_bound = np.max(scores)
 
-        thresholds = np.linspace(start=lower_bound, stop=upper_bound, num=10000)
-        best_threshold = -1
-        best_fbeta = -1
+    #     thresholds = np.linspace(start=lower_bound, stop=upper_bound, num=10000)
+    #     best_threshold = -1
+    #     best_fbeta = -1
 
-        for threshold in thresholds:
-            preds = np.where(scores > threshold, 1, 0)
-            fbeta = fbeta_score(y_true=y, y_pred=preds, beta=1.5, average="binary")
-            if fbeta > best_fbeta:
-                best_fbeta = fbeta  # <-- missing update in your code
-                best_threshold = threshold
+    #     for threshold in thresholds:
+    #         preds = np.where(scores > threshold, 1, 0)
+    #         fbeta = fbeta_score(y_true=y, y_pred=preds, beta=1.5, average="binary")
+    #         if fbeta > best_fbeta:
+    #             best_fbeta = fbeta  # <-- missing update in your code
+    #             best_threshold = threshold
 
-        logger.info(f"Best threshold computed on validation set is {best_threshold}, fbeta score: {best_fbeta}")
-        self.threshold = best_threshold
+    #     logger.info(f"Best threshold computed on validation set is {best_threshold}, fbeta score: {best_fbeta}")
+    #     self.threshold = best_threshold
 

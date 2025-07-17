@@ -126,7 +126,7 @@ class MABAD(BaseModel):
         self.latent_dim = self.layers[-1]
 
         # ─── hyper‑parameters ─────────────────────────────────────────
-        self.margin_R2 = 0.2
+        self.margin_R2 = kw.get("margin", 0.2) 
         self.lambda_push = kw.get("lambda_push", 1.0)
         self.alignment_weight = kw.get("alignment_weight", 0.25)
 
@@ -338,7 +338,7 @@ class MABAD(BaseModel):
                 logger.info("Early stopping at epoch %d", ep + 1)
                 break
 
-        self.get_decision_threshold(X_val,y_val)
+        # self.get_decision_threshold(X_val,y_val)
 
     @torch.no_grad()
     def _score(self, leaf_tensor, mda_tensor, aud_tensor):

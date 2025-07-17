@@ -40,12 +40,15 @@ from config import VAL_METRIC_TO_OPTIMIZE, SHALLOW_MODELS, NEURAL_MODELS
 #################### DevNet ####################
 @click.option('--l', default=5000, type=int)
 @click.option('--a', default=5, type=int)
-#################### MABAD
+#################### MABAD ####################
+@click.option('--margin', default=0.2, type=float)
+@click.option('--lambda_push', default=1, type=float)
+@click.option('--alignment_weight', default=0.25, type=float)
 
 
 def exe(model_type, modality, subset, n_estimators, max_depth, learning_rate, objective, tfidf_dim,
         ngram_range, imputer, standardize, n_iterations, depth, loss_function,  num_epochs, batch_size, device, layers, weight_decay
-        ,split, num_dense_cols, patience, load_tfidfs, eta, pretrain, l, a):
+        ,split, num_dense_cols, patience, load_tfidfs, eta, pretrain, l, a, margin, lambda_push, alignment_weight):
     
     args = locals()
     start = time.time()
@@ -69,7 +72,7 @@ def exe(model_type, modality, subset, n_estimators, max_depth, learning_rate, ob
         model.fit(X_train, y_train, X_val, y_val)
     else:
         model.fit(X_train, y_train)
-        model.get_decision_threshold(X_val,y_val)
+        # model.get_decision_threshold(X_val,y_val)
         model.evaluate(X_train, y_train, dataset='train')
         model.evaluate(X_val, y_val, dataset='val')
 

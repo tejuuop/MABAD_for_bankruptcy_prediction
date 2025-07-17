@@ -174,7 +174,7 @@ class AutoEncoderSVM(BaseModel):
         self.svm = OneClassSVM(kernel='rbf', nu=pos_fraction, gamma='scale')
         self.svm.fit(latent_space)
         logger.info("One-Class SVM training complete.")
-        self.get_decision_threshold(X_val, y_val)
+        # self.get_decision_threshold(X_val, y_val)
         self.save()
 
     @torch.no_grad()
