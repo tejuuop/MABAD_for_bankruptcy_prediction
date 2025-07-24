@@ -53,9 +53,9 @@ def time_split(data):
     y_test = test_df['label'] 
     X_test = test_df.drop(columns=['label','year'])
 
-    logger.info(f"Train shape: {X_train.shape}")
-    logger.info(f"val shape: {X_val.shape}")
-    logger.info(f"test shape: {X_test.shape}")
+    # logger.info(f"Train shape: {X_train.shape}")
+    # logger.info(f"val shape: {X_val.shape}")
+    # logger.info(f"test shape: {X_test.shape}")
 
     return X_train, y_train, X_val, y_val, X_test, y_test
 

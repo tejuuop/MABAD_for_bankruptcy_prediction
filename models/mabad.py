@@ -210,10 +210,21 @@ class MABAD(BaseModel):
         return 1.0 - mean_cos  # alignment penalty
 
 
+
     def _sad_loss(self, z_tab, z_mda, z_aud, y_batch):
         d_tab = torch.norm(z_tab - self.c_tab, dim=1)
         d_mda = torch.norm(z_mda - self.c_mda, dim=1)
         d_aud = torch.norm(z_aud - self.c_aud, dim=1)
+
+
+
+        # KOSTAS WAS HERE ! 
+
+        # d_max = torch.stack([d_tab, d_mda, d_aud], dim=1).max(dim=1).values
+        # d_max = torch.abs(torch.clamp(self.margin_R2 - d_max**2, max=0))
+        # loss = torch.nn.BCEWithLogitsLoss()(d_max , y_batch)
+        # return loss
+
 
         mask_n = y_batch == 0  # normals
 
@@ -233,8 +244,14 @@ class MABAD(BaseModel):
             + relu(d_aud[mask_p]).mean()
         )
         
+        
         tri = self.alignment_weight * self._alignment_masked(z_tab, z_mda, z_aud, mask_n)
-        return loss_n + loss_p + tri
+        
+        # KOSTAS WAS HERE ! 
+        # tri_pos = - self.alignment_weight * self._alignment_masked(z_tab, z_mda, z_aud, mask_p)
+        # tri = torch.norm(z_tab - self.center) +  torch.norm(z_mda - self.center) + torch.norm(z_aud - self.c_aud)
+
+        return loss_n + loss_p + tri #+ tri_pos
 
 
     def fit(self, X, y, X_val, y_val):
@@ -274,13 +291,19 @@ class MABAD(BaseModel):
             self.c_tab.copy_(zt.mean(0))
             self.c_mda.copy_(zm.mean(0))
             self.c_aud.copy_(za.mean(0))
+            self.center = (self.c_tab + self.c_mda + self.c_aud)/3
         
         with torch.no_grad():
             d_tab_mda = torch.norm(self.c_tab - self.c_mda).item()
             d_tab_aud = torch.norm(self.c_tab - self.c_aud).item()
             d_mda_aud = torch.norm(self.c_mda - self.c_aud).item()
 
+            cos_tab_mda = torch.cosine_similarity(self.c_tab, self.c_mda, dim=0).item()
+            cos_tab_aud = torch.cosine_similarity(self.c_tab, self.c_aud, dim=0).item()
+            cos_mda_aud = torch.cosine_similarity(self.c_mda, self.c_aud, dim=0).item()
+
         logger.info(f"Center distances → tab-mda: {d_tab_mda:.4f}, tab-aud: {d_tab_aud:.4f}, mda-aud: {d_mda_aud:.4f}")
+        logger.info(f"Cosine distances → tab-mda: {cos_tab_mda:.4f}, tab-aud: {cos_tab_aud:.4f}, mda-aud: {cos_mda_aud:.4f}")
 
 
         params = (

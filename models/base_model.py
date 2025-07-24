@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import json
 import os
 from datetime import datetime
-from sklearn.metrics import average_precision_score, roc_auc_score, fbeta_score
+from sklearn.metrics import average_precision_score, roc_auc_score
 import numpy as np
 from config import VAL_METRIC_TO_OPTIMIZE
 import pandas as pd
@@ -11,7 +11,6 @@ from preprocessing.base_preprocessor import BasePreprocessor
 from preprocessing.financial_preprocessor import FinancialPreprocessor
 from preprocessing.tfidf_preprocessor import TFIDFpreprocessor
 from preprocessing.multisource_preprocessor import MultisourcePreprocessor
-from preprocessing.embeddings_preprocessor import EmbeddingsPreprocessor
 
 
 logger = get_logger(__name__)
@@ -244,7 +243,7 @@ class BaseModel(ABC):
 
     def init_preprocessor(self, **kwargs):
 
-        if kwargs["modality"] == "mda_auditor":
+        if kwargs["modality"] == "mda_auditor" or kwargs["modality"] == "mda" or kwargs["modality"] == "ao":
             return TFIDFpreprocessor(**kwargs)
         elif kwargs["modality"] == "financial":
             return FinancialPreprocessor(**kwargs)

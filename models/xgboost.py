@@ -46,7 +46,7 @@ class XGBoost(BaseModel):
         self.alpha = kwargs.get('alpha', 0.25)
         self.gamma = kwargs.get('gamma', 2.0)
         self.threshold = kwargs.get("threshold", 0.5)
-
+        self.device = kwargs.get("device")
         self._preprocessor = self.init_preprocessor(**kwargs)
 
         self.clf = None  # will be xgb.Booster after training
@@ -80,18 +80,19 @@ class XGBoost(BaseModel):
             "max_depth": self.max_depth,
             "learning_rate": self.learning_rate,
             "eval_metric": "logloss",
-            "tree_method": "gpu_hist",
+            # "tree_method": "gpu_hist",
             "random_state": 42,
             "seed": 42,
             "objective": "binary:logistic",
-            # "scale_pos_weight": pos_weight
+            # "scale_pos_weight": pos_weight,
+            "device": self.device,
         }
 
         self.clf = xgb.train(
             params=params,
             dtrain=dtrain,
             num_boost_round=self.n_estimators,
-            obj=focal_loss(alpha=self.alpha, gamma=self.gamma),
+            # obj=focal_loss(alpha=self.alpha, gamma=self.gamma),
             verbose_eval=False
         )
 
