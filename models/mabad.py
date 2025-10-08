@@ -218,14 +218,6 @@ class MABAD(BaseModel):
 
 
 
-        # KOSTAS WAS HERE ! 
-
-        # d_max = torch.stack([d_tab, d_mda, d_aud], dim=1).max(dim=1).values
-        # d_max = torch.abs(torch.clamp(self.margin_R2 - d_max**2, max=0))
-        # loss = torch.nn.BCEWithLogitsLoss()(d_max , y_batch)
-        # return loss
-
-
         mask_n = y_batch == 0  # normals
 
         loss_n = (
@@ -247,9 +239,6 @@ class MABAD(BaseModel):
         
         tri = self.alignment_weight * self._alignment_masked(z_tab, z_mda, z_aud, mask_n)
         
-        # KOSTAS WAS HERE ! 
-        # tri_pos = - self.alignment_weight * self._alignment_masked(z_tab, z_mda, z_aud, mask_p)
-        # tri = torch.norm(z_tab - self.center) +  torch.norm(z_mda - self.center) + torch.norm(z_aud - self.c_aud)
 
         return loss_n + loss_p + tri #+ tri_pos
 

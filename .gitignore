@@ -14,3 +14,5 @@ TabNet/
 *.pth
 *.pth
 *.pt
+tfidfs/
+data/financial_texts.zip

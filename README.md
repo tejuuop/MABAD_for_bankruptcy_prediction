@@ -14,15 +14,6 @@ We propose a multimodal approach designed to handle sparse data in the task of b
 
 
 
-|        Stratified Data Split              |        |
-|----------------------------------|-------------|
-|Training samples | 27328|
-|Validation samples | 3912 |
-|Test samples | 7801|
-|Training <em>bankrupt</em> samples | 134|
-|Validation <em>bankrupt</em> samples | 19 |
-|Test <em>bankrupt </em> samples | 39|
-
 <br>
 
 |        Time-based Data Split              |        |
