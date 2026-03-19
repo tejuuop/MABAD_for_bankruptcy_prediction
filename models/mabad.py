@@ -148,17 +148,18 @@ class MABAD(BaseModel):
         self.max_depth = 5
         self.xgb_learning_rate = 0.05 
        
-        # Choose CPU/GPU tree method
-        tree_method = "gpu_hist" if self.device.startswith("cuda") else "hist"
+        # Ensure the device string is in a format XGBoost understands (e.g., 'cuda')
+        xgb_device = "cuda" if "cuda" in self.device else "cpu"
 
         self.clf = XGBClassifier(
             n_estimators=self.n_estimators,
             max_depth=self.max_depth,
             learning_rate=self.xgb_learning_rate,
             objective="binary:logistic",
-            tree_method=tree_method,
+            tree_method="hist",  # 'hist' is the correct modern method
+            device=xgb_device,    # Use the GPU if available
             verbosity=0,
-            random_state = 42
+            random_state=42
         )
 
         # Text encoders remain MLPs
