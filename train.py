@@ -70,6 +70,7 @@ def exe(model_type, modality, subset, n_estimators, max_depth, learning_rate, ob
 
     if model_type in NEURAL_MODELS:
         model.fit(X_train, y_train, X_val, y_val)
+        model.preprocessor.save()  # <-- WE ADD THE MISSING LINE!
     else:
         model.fit(X_train, y_train)
         # model.get_decision_threshold(X_val,y_val)
