@@ -1,0 +1,4 @@
+split,rows,positives,contradiction_available_rows,coverage_positive_rows,mean_coverage,median_coverage,max_score,min_score,liquidity_numerical_available,liquidity_narrative_available,liquidity_eligible,leverage_numerical_available,leverage_narrative_available,leverage_eligible,profitability_numerical_available,profitability_narrative_available,profitability_eligible
+train,29752,126,23228,23228,0.6191292462131397,0.6666666666666666,0.9674005985463874,0.0,24331,21162,17493,22956,19632,15528,24747,26582,22240
+val,2908,19,2696,2696,0.7457588262265016,1.0,0.9768973020382644,0.0,2867,2062,2033,2715,1998,1877,2819,2680,2596
+test,6381,47,5968,5968,0.7512406623831166,1.0,0.8600131032976632,0.0,6293,4661,4590,5929,4347,4055,6194,5906,5736

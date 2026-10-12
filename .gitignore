@@ -19,7 +19,6 @@ tfidfs/
 data/financial_texts.zip
 
 # Add these lines to your ~/Projects/pbl/MABAD_for_bankruptcy_prediction/.gitignore file
-*.csv
 *.tsv
 *.h5
 *.pkl
