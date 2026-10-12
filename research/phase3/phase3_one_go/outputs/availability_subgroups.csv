@@ -1,0 +1,7 @@
+split,grouping_variable,group_value,n,positives,prevalence
+validation,financial_available,1,2908,19,0.006533700137551582
+validation,mda_available,1,2908,19,0.006533700137551582
+validation,auditor_available,1,2908,19,0.006533700137551582
+test_exploratory,financial_available,1,6381,47,0.007365616674502429
+test_exploratory,mda_available,1,6381,47,0.007365616674502429
+test_exploratory,auditor_available,1,6381,47,0.007365616674502429
