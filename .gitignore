@@ -17,3 +17,21 @@ TabNet/
 *.pt
 tfidfs/
 data/financial_texts.zip
+
+# Add these lines to your ~/Projects/pbl/MABAD_for_bankruptcy_prediction/.gitignore file
+*.csv
+*.tsv
+*.h5
+*.pkl
+*.npy
+*.npz
+data/
+datasets/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Exclude oversized research outputs
+research/contradiction/outputs/contradiction_evidence.csv
+research/contradiction/outputs/contradiction_features.csv
